@@ -287,11 +287,13 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   when frozen, when every step runs off the top and the flight's top edge
   glows, breathing with the Freeze halo. A read-out gives the RT60 at
   1 kHz ("Frozen" with an infinity sign when frozen).
-- **Three rows of knobs**, named on their left: Space (Decay, Size,
-  Pre-delay, Sync and its note, Diffusion), Tone (Damping, Damp freq, Bass,
-  Crossover, Low cut, High cut), Motion (Mod rate, Mod depth, Early/Late,
-  Width, the two shimmer voices, Pitched input, and the voices' intervals
-  stacked in the last column). Disabled when they do nothing
+- **Three rows of knobs**, six columns each, named on their left: Space
+  (Decay, Size, Pre-delay, Sync with its note under it, Diffusion,
+  Early/Late), Tone (Damping, Damp freq, Bass, Crossover, Low cut, High
+  cut), Motion (Mod rate, Mod depth, Width, then the framed HEAVEN group
+  over three columns: Shimmer 1 and Shimmer 2, each with its interval menu
+  under the knob, and Pitched in; the frame is lit in Heaven's colour on the
+  top floor, dim elsewhere). Disabled when they do nothing
   (the pre-delay knob while synced, the note while not, the shimmer outside
   Heaven).
 - **Mix and Output** as console faders on the right.

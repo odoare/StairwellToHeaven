@@ -14,11 +14,13 @@
       under them  left, the floor indicator (the floor sounding, an arrow
                   while a mode change travels), the floor selector (the mode,
                   as a lift panel: Room at the bottom, Heaven at the top) and
-                  Freeze (a halo); centre, three rows of knobs: Space (decay, size,
-                  pre-delay and its sync, diffusion), Tone (damping, its
-                  frequency, bass, crossover, low and high cut), Motion
-                  (modulation, early/late, width, the two shimmer voices,
-                  Pitched input, the voices' intervals);
+                  Freeze (a halo); centre, three rows of six columns: Space
+                  (decay, size, pre-delay and its sync, diffusion,
+                  early/late), Tone (damping, its frequency, bass,
+                  crossover, low and high cut), Motion (modulation rate and
+                  depth, width, then the framed HEAVEN group: the two
+                  shimmer voices, each with its interval menu under it, and
+                  Pitched input);
                   right, the Mix and Output faders.
 
     The backdrop's light follows the reverb's tail: the window brightens as
@@ -96,6 +98,8 @@ private:
     std::unique_ptr<ComboAttachment> divisionAtt, pitchAtt, pitch2Att;
 
     juce::Rectangle<int> spaceRow, toneRow, motionRow;
+    juce::Rectangle<int> heavenGroup;   // the shimmer controls' frame in Motion
+    bool heavenMode = false;            // drawn lit on the top floor
 
     /** The window's light (0 .. 1), following the tail: rises fast, falls
         slowly, held while frozen; and its colour (pale blue in Heaven). */

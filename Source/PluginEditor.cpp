@@ -243,6 +243,11 @@ void StairwellAudioProcessorEditor::timerCallback()
     enable (shimmer2Knob, heaven);
     enable (pitch2Box, heaven);
     enable (pitchedInputKnob, heaven);
+    if (heaven != heavenMode)
+    {
+        heavenMode = heaven;
+        repaint (heavenGroup);
+    }
 
     // The window's light: the tail's energy from -60 dB (dark) to 0 dB, up
     // fast, down slowly; frozen, a steady glow.
@@ -293,6 +298,23 @@ void StairwellAudioProcessorEditor::paint (juce::Graphics& g)
         g.restoreState();
         g.setColour (theme::panelLine.withAlpha (0.6f));
         g.drawVerticalLine (row.getX() + 15, (float) row.getY() + 8.0f, (float) row.getBottom() - 8.0f);
+    }
+
+    // The HEAVEN group in Motion: a frame with its title, lit in Heaven's
+    // colour on the top floor, dim elsewhere (its controls are disabled).
+    if (! heavenGroup.isEmpty())
+    {
+        const auto frame = heavenGroup.toFloat().reduced (0.5f);
+        const auto colour = heavenMode ? theme::shimmer : theme::panelLine;
+        g.setColour (colour.withAlpha (heavenMode ? 0.08f : 0.0f));
+        g.fillRoundedRectangle (frame, 5.0f);
+        g.setColour (colour.withAlpha (heavenMode ? 0.7f : 0.6f));
+        g.drawRoundedRectangle (frame, 5.0f, 1.0f);
+
+        g.setFont (juce::FontOptions (10.0f, juce::Font::bold));
+        g.setColour (heavenMode ? theme::shimmer : theme::dimText);
+        g.drawText ("HEAVEN", juce::Rectangle<float> (frame.getX() + 8.0f, frame.getY() + 2.0f, 60.0f, 11.0f),
+                    juce::Justification::centredLeft, false);
     }
 }
 
@@ -348,7 +370,7 @@ void StairwellAudioProcessorEditor::resized()
     };
 
     // Space: the sync switch and the note menu share one column.
-    layoutRow (spaceRow, { &decayKnob, &sizeKnob, &predelayKnob, nullptr, &diffusionKnob, nullptr });
+    layoutRow (spaceRow, { &decayKnob, &sizeKnob, &predelayKnob, nullptr, &diffusionKnob, &erLateKnob });
     {
         auto r = spaceRow.withTrimmedLeft (20);
         const int w = r.getWidth() / 6;
@@ -357,15 +379,24 @@ void StairwellAudioProcessorEditor::resized()
         divisionBox.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, 16));
     }
     layoutRow (toneRow, { &dampingKnob, &dampFreqKnob, &bassKnob, &crossoverKnob, &lowCutKnob, &highCutKnob });
-    // Motion: the two shimmer voices, then their intervals stacked in a
-    // wider last column (the names are long).
+    // Motion: modulation and width, then the HEAVEN group (framed in
+    // paint()): each shimmer voice's knob with its interval menu under it,
+    // and Pitched in.
     {
         auto r = motionRow.withTrimmedLeft (20);
-        const int w = r.getWidth() / 9;
-        for (auto* knob : { &modRateKnob, &modDepthKnob, &erLateKnob, &widthKnob, &shimmerKnob, &shimmer2Knob, &pitchedInputKnob })
+        const int w = r.getWidth() / 6;
+        for (auto* knob : { &modRateKnob, &modDepthKnob, &widthKnob })
             knob->setBounds (r.removeFromLeft (w).reduced (2));
-        auto cell = r.reduced (4, 0);
-        pitchBox.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, -16));
-        pitch2Box.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, 16));
+        heavenGroup = r.reduced (2, 1);
+        auto group = heavenGroup.reduced (4, 4).withTrimmedTop (8);   // room for the frame's title
+        const int gw = group.getWidth() / 3;
+        auto voiceCell = [] (juce::Rectangle<int> cell, juce::Component& knob, juce::Component& menu)
+        {
+            menu.setBounds (cell.removeFromBottom (22).reduced (2, 0));
+            knob.setBounds (cell.reduced (2, 0));
+        };
+        voiceCell (group.removeFromLeft (gw), shimmerKnob, pitchBox);
+        voiceCell (group.removeFromLeft (gw), shimmer2Knob, pitch2Box);
+        pitchedInputKnob.setBounds (group.reduced (2, 0));
     }
 }

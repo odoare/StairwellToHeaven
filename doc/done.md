@@ -2,6 +2,14 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## Knob rows rebalanced, a HEAVEN group (2026-11-06)
+
+Motion had seven knobs and a column of two menus. Now every row has six
+columns: Early/Late moved into Space's empty cell; Motion keeps Mod rate,
+Mod depth and Width, then a framed HEAVEN group (Shimmer 1 and 2, each with
+its interval menu under it, and Pitched in), lit on the top floor and dim
+elsewhere. Not built as a plugin yet.
+
 ## Pitched input: the shimmer alone (2026-11-06)
 
 Heaven gained Pitched input (0 to 100 %): the reverb's input (early
