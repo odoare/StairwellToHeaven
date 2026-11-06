@@ -7,14 +7,19 @@
       top bar     name, version, the preset bar with its browser, the "?"
                   (hover help on/off) and the info button; the icon opens
                   the splash.
-      left        the floor selector (the mode, as a lift panel: Room at the
-                  bottom, Heaven at the top) and Freeze under it.
+      left        the floor indicator (the floor sounding, an arrow while a
+                  mode change travels), the floor selector (the mode, as a
+                  lift panel: Room at the bottom, Heaven at the top) and
+                  Freeze under it.
       centre      the decay stairs (RT60 against frequency, with the tail's
                   light above), then three rows of knobs: Space (decay, size,
                   pre-delay and its sync, diffusion), Tone (damping, its
                   frequency, bass, crossover, low and high cut), Motion
                   (modulation, early/late, width, shimmer and its interval).
       right       Mix and Output faders.
+
+    The backdrop's light follows the reverb's tail: the window brightens as
+    it blooms and dims as it dies (steady while frozen).
 
     Controls that do nothing in the current state are disabled (the
     pre-delay knob while synced and the note menu while not, the shimmer
@@ -34,6 +39,7 @@
 #include "Theme.h"
 #include "Components/DecayStairs.h"
 #include "Components/FloorSelector.h"
+#include "Components/FloorIndicator.h"
 
 class StairwellAudioProcessorEditor : public juce::AudioProcessorEditor,
                                       private juce::Timer
@@ -61,6 +67,7 @@ private:
     fxme::AccentToggle tooltipsButton;
     fxme::InfoButton infoButton;
 
+    FloorIndicator floorIndicator;
     FloorSelector floors;
     fxme::AccentToggle freezeButton;
     DecayStairs stairs;
@@ -83,6 +90,11 @@ private:
     std::unique_ptr<ComboAttachment> divisionAtt, pitchAtt;
 
     juce::Rectangle<int> spaceRow, toneRow, motionRow;
+
+    /** The window's light (0 .. 1), following the tail: rises fast, falls
+        slowly, held while frozen; and its colour (pale blue in Heaven). */
+    float windowLight = 0.0f;
+    juce::Colour windowLightColour = sth::theme::glow;
 
     /** The splash: over everything, once per instance for 3 s, and until
         clicked from the top bar's icon or logo. */

@@ -48,6 +48,15 @@ namespace
 
 StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProcessor& p)
     : AudioProcessorEditor (&p), processor (p),
+      floorIndicator ([this]
+                      {
+                          FloorIndicator::State st;
+                          st.target = juce::roundToInt (processor.getAPVTS().getRawParameterValue (ids::mode)->load());
+                          st.sounding = processor.getActiveFloor();
+                          st.fade = processor.getModeFade();
+                          return st;
+                      },
+                      juce::StringArray ("1", "2", "3", "4", juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x9e")))),
       floors (*p.getAPVTS().getParameter (ids::mode), choices::modes,
               juce::StringArray ("1", "2", "3", "4", juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x9e")))),
       stairs ([this]
@@ -98,6 +107,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     topBar.onLogoClicked = [this] { splash.show (-1); };
 
     // Floors and Freeze.
+    floorIndicator.setTooltip (tips::global::floorIndicator);
+    addAndMakeVisible (floorIndicator);
     floors.topFloorColour = theme::shimmer;
     floors.setTooltip (tips::global::mode);
     addAndMakeVisible (floors);
@@ -165,7 +176,7 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
         splash.show (3000);
 
     timerCallback();
-    startTimerHz (15);
+    startTimerHz (20);
 }
 
 StairwellAudioProcessorEditor::~StairwellAudioProcessorEditor()
@@ -209,6 +220,20 @@ void StairwellAudioProcessorEditor::timerCallback()
     enable (divisionBox, synced);
     enable (shimmerKnob, heaven);
     enable (pitchBox, heaven);
+
+    // The window's light: the tail's energy from -60 dB (dark) to 0 dB, up
+    // fast, down slowly; frozen, a steady glow.
+    const bool frozen = apvts.getRawParameterValue (ids::freeze)->load() > 0.5f;
+    const float energy = juce::jlimit (0.0f, 1.0f, (processor.getTailEnergyDb() + 60.0f) / 60.0f);
+    const float target = frozen ? juce::jmax (0.7f, energy) : energy;
+    const float light = windowLight + (target > windowLight ? 0.4f : 0.06f) * (target - windowLight);
+    const auto colour = frozen ? theme::frozen : (heaven ? theme::shimmer : theme::glow);
+    if (std::abs (light - windowLight) > 0.004f || colour != windowLightColour)
+    {
+        windowLight = light;
+        windowLightColour = colour;
+        repaint();
+    }
 }
 
 //==============================================================================
@@ -227,7 +252,7 @@ juce::Image StairwellAudioProcessorEditor::logoImage()
 
 void StairwellAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    theme::paintBackdrop (g, getLocalBounds().toFloat());
+    theme::paintBackdrop (g, getLocalBounds().toFloat(), windowLight, windowLightColour);
 
     // Section names, left of each knob row.
     g.setFont (juce::FontOptions (11.0f, juce::Font::bold));
@@ -256,8 +281,10 @@ void StairwellAudioProcessorEditor::resized()
     splash.setBounds (getLocalBounds());
     area.reduce (theme::margin, theme::margin);
 
-    // Left: the floors, Freeze under them.
+    // Left: the floor indicator, the floors, Freeze under them.
     auto left = area.removeFromLeft (150);
+    floorIndicator.setBounds (left.removeFromTop (58).reduced (14, 0));
+    left.removeFromTop (8);
     freezeButton.setBounds (left.removeFromBottom (40).reduced (4, 2));
     left.removeFromBottom (8);
     floors.setBounds (left);

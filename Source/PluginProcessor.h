@@ -61,6 +61,11 @@ public:
     /** The tail's energy in dB, for the display's glow. */
     float getTailEnergyDb() noexcept     { return engine.getTailEnergyDb().load (std::memory_order_relaxed); }
 
+    /** The floor sounding now (0 Room .. 4 Heaven) and the mode-change
+        fade (1 settled), for the floor indicator. */
+    int getActiveFloor() noexcept        { return engine.getActiveFloor().load (std::memory_order_relaxed); }
+    float getModeFade() noexcept         { return engine.getModeFade().load (std::memory_order_relaxed); }
+
     /** True the first time it is asked in this plugin instance: the splash is
         shown once, not each time the window opens. */
     bool takeFirstSplash() noexcept      { return ! std::exchange (splashShown, true); }

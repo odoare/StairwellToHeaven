@@ -53,5 +53,7 @@ namespace sth::tips::global
     inline constexpr auto stairs    = "The decay stairs: one step per third of an octave, its height the time the tail lasts there. "
                                       "Damping lowers the steps on the right, Bass raises or lowers them on the left. "
                                       "The light at the top is the tail itself.";
+    inline constexpr auto floorIndicator = "The floor sounding now. An arrow lights while the reverb travels to another "
+                                           "floor (it fades out, switches and fades back in: the tail is cleared).";
     inline constexpr auto tooltips  = "Hover help on the controls: on or off.";
 }

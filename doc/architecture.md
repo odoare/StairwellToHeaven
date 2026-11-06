@@ -54,6 +54,7 @@ StairwellToHeaven/
     Dsp/StairwellEngine.*   the signal path, JUCE-free (FxmeCore only)
     Components/DecayStairs.*    the decay display
     Components/FloorSelector.*  the mode selector (lift panel)
+    Components/FloorIndicator.* the lift's floor display above it
     Assets/                 logo, icon, splash, factory presets (*.xml)
   Tests/EngineTests.cpp     headless engine tests (FxmeCore only)
   tools/make_presets.py     writes the factory presets
@@ -224,6 +225,13 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
 - **The floors** (left, `FloorSelector`): the mode as a lift's button panel,
   Room on the ground floor up to Heaven at the top (its button lit in
   Heaven's pale blue). One click, one undoable gesture; follows automation.
+- **The floor indicator** (above the floors, `FloorIndicator`): the lift's
+  display, the floor sounding now ("1" to "4", an infinity sign for Heaven)
+  in amber over the dim ghost of its segments. An up or down arrow blinks
+  while a mode change travels (at least 0.6 s, though the engine's switch
+  takes 60 ms), and the display flashes once on arrival. It shows the
+  engine's floor (`StairwellEngine::getActiveFloor`, with the fade level),
+  not the parameter's, so it tells the truth during the switch.
 - **Freeze** under the floors: a latching button in pale ice blue.
 - **The decay stairs** (top centre, `DecayStairs`): RT60 against frequency as
   a staircase, one step per third of an octave, stone at the bottom turning
@@ -239,8 +247,13 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   pre-delay knob while synced, the note while not, the shimmer outside
   Heaven).
 - **Mix and Output** as console faders on the right.
-- **The backdrop**: stone at the bottom of the window, a faint warm light at
-  the top.
+- **The backdrop**: stone at the bottom of the window, a warm light from the
+  top whose strength follows the tail's energy (-60 dB dark to 0 dB full,
+  rising fast, falling slowly): the window brightens as the reverb blooms and
+  dims as it dies. Frozen it stays lit (pale blue), in Heaven it turns pale
+  blue-white. The light stops above the knob rows and is held at 28 %
+  opacity, so the controls stay readable. Driven by the editor's 20 Hz timer,
+  repainting only when the level moves.
 
 ### Proposals around the name (not built; to choose)
 
@@ -248,7 +261,7 @@ Ideas that keep the pun on the plugin's name to the name itself: nothing
 borrowed from the famous song or its band (no imagery, lettering, lyrics or
 symbols), which would be a copyright and trademark risk as well as a cliché.
 
-- **A. The floor indicator.** A small segment display above the lift panel
+- **A. The floor indicator.** (Built, see above.) A small segment display above the lift panel
   showing the floor ("1" to "4", an infinity sign for Heaven), with an up or
   down arrow lit while a mode change fades. Cheap, and it makes the mode
   change (which clears the tail) visible.
@@ -257,7 +270,7 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
   flutter reads as regular footsteps, the Hall's as sparse ones. Needs the
   ER pattern and time scale exposed to the display (the core already has
   `EarlyReflections::getTaps`).
-- **C. The window lights up.** The backdrop's warm light follows the tail's
+- **C. The window lights up.** (Built, see above.) The backdrop's warm light follows the tail's
   energy (already metered): the whole plugin brightens as the reverb blooms
   and dims as it dies, frozen it stays lit. Subtle, but the strongest
   "heaven" cue for little code; needs care to stay readable.
@@ -272,8 +285,7 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
 - **G. Real artwork** for the splash and the icon (todo 8): the
   placeholders are a gold staircase climbing into light, drawn by a script.
 
-My suggestion: A and C first (small, they make state visible), then B,
-then D.
+A and C were chosen and built (2026-11-06). Next candidates: B, then D.
 
 ## Presets
 
@@ -291,7 +303,9 @@ Room. No module presets (the plugin has no embeddable part).
   and runs the engine. No allocation, no locks.
 - Message thread: the editor's components poll on timers; the decay stairs
   call `currentParameters()` (atomics) and `TankReverb::rt60At()`, and read
-  the engine's tail energy (an atomic).
+  the engine's tail energy (an atomic); the floor indicator reads the
+  engine's active floor and mode fade (atomics); the editor reads the tail
+  energy for the window's light.
 - State: the APVTS tree as XML with a `stateVersion` attribute (1).
 - Latency: none. Tail length reported: pre-delay + Decay x max (1, Bass),
   x1.5 in Heaven.

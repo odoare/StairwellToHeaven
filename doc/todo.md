@@ -23,9 +23,10 @@ high (blocks a release), medium, low.
 6. **ER from `RoomAcoustics`** (low). Early reflection patterns from the
    image-source model (FxmeTools `acoustics/RoomAcoustics.h`) instead of
    fixed tables, scaled by Size.
-7. **Themed GUI** (medium). Choose among the proposals in
-   `architecture.md` (GUI, "Proposals around the name": floor indicator,
-   footsteps, lighting window, sparkles, ascending layout, halo Freeze).
+7. **Themed GUI** (medium). A (floor indicator) and C (the window lights
+   up) are built. Left: B (footsteps: the early reflections on the first
+   steps), D (sparkles in Heaven), E (ascending layout), F (halo Freeze);
+   see `architecture.md`, GUI, "Proposals around the name".
 8. **Artwork** (medium). A real splash and icon (the current ones are
    placeholders drawn by a script), then a screenshot for the README.
 9. **First release** (medium). After 1, 2 and 8: README checked, tag

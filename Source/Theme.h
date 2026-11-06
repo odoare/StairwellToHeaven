@@ -63,13 +63,26 @@ namespace sth::theme
         c.setColour (juce::ComboBox::textColourId,       text);
     }
 
-    /** The window's backdrop: stone at the bottom, a faint warm light at the
-        top. */
-    inline void paintBackdrop (juce::Graphics& g, juce::Rectangle<float> r)
+    /** The window's backdrop: stone, with a warm light from the top whose
+        strength (0 .. 1) follows the reverb's tail (the editor passes it), so
+        the window brightens as the reverb blooms and dims as it dies. The
+        light stays in the upper part, where it reads as a glow from above,
+        and is held to a level that keeps the controls readable. */
+    inline void paintBackdrop (juce::Graphics& g, juce::Rectangle<float> r, float light01 = 0.0f,
+                               juce::Colour lightColour = glow)
     {
-        juce::ColourGradient grad (glow.withAlpha (1.0f).interpolatedWith (stone, 0.88f), r.getX(), r.getY(),
+        juce::ColourGradient base (glow.interpolatedWith (stone, 0.88f), r.getX(), r.getY(),
                                    stoneDeep, r.getX(), r.getBottom(), false);
-        g.setGradientFill (grad);
+        g.setGradientFill (base);
+        g.fillRect (r);
+
+        const float l = juce::jlimit (0.0f, 1.0f, light01);
+        if (l <= 0.001f)
+            return;
+        juce::ColourGradient light (lightColour.withAlpha (0.28f * l), r.getCentreX(), r.getY() - r.getHeight() * 0.15f,
+                                    lightColour.withAlpha (0.0f), r.getCentreX(), r.getY() + r.getHeight() * 0.55f,
+                                    true);
+        g.setGradientFill (light);
         g.fillRect (r);
     }
 }

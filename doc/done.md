@@ -2,6 +2,19 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## 7 (part). Themed GUI: floor indicator, a window lit by the tail (2026-11-06)
+
+Proposals A and C of `architecture.md`:
+
+- A: `Components/FloorIndicator`, the lift's floor display above the floor
+  selector: the floor sounding now, an arrow while a mode change travels
+  (held 0.6 s so it is seen), a flash on arrival. The engine now exposes the
+  floor it plays and its mode fade (`getActiveFloor`, `getModeFade`).
+- C: the backdrop's light follows the tail's energy (`theme::paintBackdrop`
+  takes a level and a colour; the editor's timer drives it): brighter as the
+  reverb blooms, dimmer as it dies, steady while frozen, pale blue in Heaven.
+- Checked: the engine tests still pass. Not built as a plugin yet.
+
 ## First implementation (2026-11-06)
 
 The advanced reverb planned in FxmeFX's `todo.md` (section 4), as a new

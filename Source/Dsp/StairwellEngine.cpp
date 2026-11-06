@@ -111,6 +111,7 @@ void StairwellEngine::reset()
 void StairwellEngine::applyMode (Mode m) noexcept
 {
     activeMode = m;
+    activeFloor.store ((int) m, std::memory_order_relaxed);
     const auto v = modeVoicing (m);
     er.setPattern (v.erPattern);
     erIntoTank = v.erIntoTank;
@@ -205,6 +206,8 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
     }
 
     tailEnergyDb.store (energy > 1.0e-10f ? 10.0f * std::log10 (energy) : -100.0f, std::memory_order_relaxed);
+    activeFloor.store ((int) activeMode, std::memory_order_relaxed);
+    modeFadeLevel.store (switchingMode ? modeFade : std::min (1.0f, modeFade), std::memory_order_relaxed);
 }
 
 } // namespace sth

@@ -113,6 +113,12 @@ public:
         the GUI's tail glow and FxmeNet. */
     std::atomic<float>& getTailEnergyDb() noexcept { return tailEnergyDb; }
 
+    /** The floor actually sounding (it lags the parameter during a mode
+        change), and the wet's level through that change (1 when settled,
+        down to 0 at the switch): for the GUI's floor indicator. */
+    std::atomic<int>& getActiveFloor() noexcept    { return activeFloor; }
+    std::atomic<float>& getModeFade() noexcept     { return modeFadeLevel; }
+
 private:
     void applyMode (Mode m) noexcept;
 
@@ -141,6 +147,8 @@ private:
     bool  switchingMode = false;
 
     std::atomic<float> tailEnergyDb { -100.0f };
+    std::atomic<int>   activeFloor { (int) Mode::hall };
+    std::atomic<float> modeFadeLevel { 1.0f };
 };
 
 } // namespace sth
