@@ -7,7 +7,7 @@
     from fxme::TankReverb::rt60At on the very settings the engine uses). So
     Damping lowers the steps on the right, Bass raises or lowers them on the
     left, Decay lifts the whole flight. Frozen, every step runs off the top
-    into the light.
+    into the light, and the top edge glows (breathing with the Freeze halo).
 
     Above the stairs, the light: a glow whose brightness follows the tail's
     energy as it plays (the engine's meter), a pale blue halo while frozen.

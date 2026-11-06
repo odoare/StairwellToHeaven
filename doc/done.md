@@ -2,6 +2,17 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## 7 (part). Themed GUI: halo Freeze (2026-11-06)
+
+Proposal F of `architecture.md`: Freeze as a halo (`Components/HaloButton`),
+a dim ring off, a glowing breathing ring on; the decay stairs' top edge
+glows while frozen, on the same breathing clock. Not built as a plugin yet.
+
+Proposal E (the knob rows as ascending landings on stone slabs, and stone
+knob caps with brass rims through a look-and-feel subclass) was built the
+same day and reverted at the user's request: the rows are aligned again and
+the knobs are FxmeLookAndFeel's.
+
 ## 7 (part). Themed GUI: footsteps (2026-11-06)
 
 Revised the same day: the walk now starts on every input onset (the

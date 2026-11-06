@@ -140,6 +140,20 @@ void DecayStairs::paint (juce::Graphics& g)
         g.drawVerticalLine ((int) x1, top, plot.getBottom());
     }
 
+    // Frozen: the flight's top edge glows, where every step now runs out,
+    // breathing with the Freeze halo.
+    if (frozen)
+    {
+        const float breath = 0.85f + 0.15f * (0.5f + 0.5f * std::sin ((float) juce::Time::getMillisecondCounter() * 0.0016f));
+        for (int i = 5; i >= 1; --i)
+        {
+            g.setColour (theme::frozen.withAlpha (0.09f * breath));
+            g.fillRect (plot.withHeight (2.0f * (float) i + 1.0f));
+        }
+        g.setColour (theme::frozen.brighter (0.3f).withAlpha (breath));
+        g.fillRect (plot.withHeight (2.0f));
+    }
+
     // The read-out.
     g.setFont (juce::FontOptions (13.0f, juce::Font::bold));
     g.setColour (frozen ? theme::frozen : theme::text);

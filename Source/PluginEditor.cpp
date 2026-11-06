@@ -119,8 +119,7 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     floors.topFloorColour = theme::shimmer;
     floors.setTooltip (tips::global::mode);
     addAndMakeVisible (floors);
-    freezeButton.setButtonText ("Freeze");
-    freezeButton.setAccent (theme::frozen, theme::text, theme::stoneLight);
+    freezeButton.lightColour = theme::frozen;
     freezeButton.setTooltip (tips::global::freeze);
     freezeAtt = attachButton (p.getAPVTS(), ids::freeze, freezeButton);
     addAndMakeVisible (freezeButton);
@@ -265,21 +264,20 @@ void StairwellAudioProcessorEditor::paint (juce::Graphics& g)
 
     // Section names, left of each knob row.
     g.setFont (juce::FontOptions (11.0f, juce::Font::bold));
-    g.setColour (theme::dimText);
     const std::pair<juce::Rectangle<int>, const char*> rows[] { { spaceRow, "SPACE" }, { toneRow, "TONE" }, { motionRow, "MOTION" } };
-    for (const auto& [r, name] : rows)
+    for (const auto& [row, name] : rows)
     {
-        if (r.isEmpty())
+        if (row.isEmpty())
             continue;
+        g.setColour (theme::dimText);
         g.saveState();
         g.addTransform (juce::AffineTransform::rotation (-juce::MathConstants<float>::halfPi,
-                                                         (float) r.getX() + 7.0f, (float) r.getCentreY()));
-        g.drawText (name, juce::Rectangle<float> ((float) r.getX() + 7.0f - 40.0f, (float) r.getCentreY() - 7.0f, 80.0f, 14.0f),
+                                                         (float) row.getX() + 7.0f, (float) row.getCentreY()));
+        g.drawText (name, juce::Rectangle<float> ((float) row.getX() + 7.0f - 40.0f, (float) row.getCentreY() - 7.0f, 80.0f, 14.0f),
                     juce::Justification::centred, false);
         g.restoreState();
         g.setColour (theme::panelLine.withAlpha (0.6f));
-        g.drawVerticalLine (r.getX() + 15, (float) r.getY() + 8.0f, (float) r.getBottom() - 8.0f);
-        g.setColour (theme::dimText);
+        g.drawVerticalLine (row.getX() + 15, (float) row.getY() + 8.0f, (float) row.getBottom() - 8.0f);
     }
 }
 
@@ -308,7 +306,7 @@ void StairwellAudioProcessorEditor::resized()
     auto left = area.removeFromLeft (150);
     floorIndicator.setBounds (left.removeFromTop (50).reduced (14, 0));
     left.removeFromTop (6);
-    freezeButton.setBounds (left.removeFromBottom (36).reduced (4, 2));
+    freezeButton.setBounds (left.removeFromBottom (60).reduced (4, 2));
     left.removeFromBottom (6);
     floors.setBounds (left);
     area.removeFromLeft (theme::margin);

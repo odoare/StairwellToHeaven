@@ -14,7 +14,7 @@
       under them  left, the floor indicator (the floor sounding, an arrow
                   while a mode change travels), the floor selector (the mode,
                   as a lift panel: Room at the bottom, Heaven at the top) and
-                  Freeze; centre, three rows of knobs: Space (decay, size,
+                  Freeze (a halo); centre, three rows of knobs: Space (decay, size,
                   pre-delay and its sync, diffusion), Tone (damping, its
                   frequency, bass, crossover, low and high cut), Motion
                   (modulation, early/late, width, shimmer and its interval);
@@ -43,6 +43,7 @@
 #include "Components/FloorSelector.h"
 #include "Components/FloorIndicator.h"
 #include "Components/Footsteps.h"
+#include "Components/HaloButton.h"
 
 class StairwellAudioProcessorEditor : public juce::AudioProcessorEditor,
                                       private juce::Timer
@@ -72,7 +73,7 @@ private:
 
     FloorIndicator floorIndicator;
     FloorSelector floors;
-    fxme::AccentToggle freezeButton;
+    HaloButton freezeButton { "Freeze" };
     Footsteps footsteps;
     DecayStairs stairs;
 

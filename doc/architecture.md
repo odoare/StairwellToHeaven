@@ -56,6 +56,7 @@ StairwellToHeaven/
     Components/FloorSelector.*  the mode selector (lift panel)
     Components/FloorIndicator.* the lift's floor display above it
     Components/Footsteps.*      the early reflections as footsteps
+    Components/HaloButton.*     Freeze, as a halo
     Assets/                 logo, icon, splash, factory presets (*.xml)
   Tests/EngineTests.cpp     headless engine tests (FxmeCore only)
   tools/make_presets.py     writes the factory presets
@@ -233,7 +234,12 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   takes 60 ms), and the display flashes once on arrival. It shows the
   engine's floor (`StairwellEngine::getActiveFloor`, with the fade level),
   not the parameter's, so it tells the truth during the switch.
-- **Freeze** under the floors: a latching button in pale ice blue.
+- **Freeze** under the floors, as a halo (`HaloButton`): a ring of light
+  over the word, a dim stone ring when off; on, it glows pale ice blue in
+  soft layers and breathes slowly (about 4 s), on the same clock as the
+  decay stairs' frozen edge, so the two breathe together. A latching
+  `juce::Button` bound by a ButtonAttachment; its breathing timer runs only
+  while on.
 - **The layout**: the two displays (footsteps, then the decay stairs) across
   the whole width under the top bar; under them, the floors on the left, the
   knob rows in the centre, the faders on the right.
@@ -259,13 +265,14 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   gold as it rises; each tread lit. Damping lowers the right of the flight,
   Bass the left, Decay the whole. Above it, the light: a glow that follows
   the tail's energy as it plays (blue-white in Heaven), a steady pale halo
-  when frozen, when every step runs off the top. A read-out gives the RT60 at
+  when frozen, when every step runs off the top and the flight's top edge
+  glows, breathing with the Freeze halo. A read-out gives the RT60 at
   1 kHz ("Frozen" with an infinity sign when frozen).
 - **Three rows of knobs**, named on their left: Space (Decay, Size,
   Pre-delay, Sync and its note, Diffusion), Tone (Damping, Damp freq, Bass,
   Crossover, Low cut, High cut), Motion (Mod rate, Mod depth, Early/Late,
-  Width, Shimmer and its interval). Disabled when they do nothing (the
-  pre-delay knob while synced, the note while not, the shimmer outside
+  Width, Shimmer and its interval). Disabled when they do nothing
+  (the pre-delay knob while synced, the note while not, the shimmer outside
   Heaven).
 - **Mix and Output** as console faders on the right.
 - **The backdrop**: stone at the bottom of the window, a warm light from the
@@ -298,15 +305,15 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
 - **D. Rising sparkles in Heaven.** Small points of light drifting up the
   stairs, their number following the Shimmer amount and their pitch steps
   following the interval (an octave climbs twice as fast as a fifth).
-- **E. Ascending layout.** The three knob rows offset to the right as they
+- **E. Ascending layout.** (Tried both ways on 2026-11-06, landings and stone and brass knobs, and reverted.) The three knob rows offset to the right as they
   go down (each row a landing), or the knob caps drawn as stone with brass
   rims. A bigger change; worth a mock-up before code.
-- **F. A halo Freeze.** The Freeze button as a ring of light rather than a
+- **F. A halo Freeze.** (Built.) The Freeze button as a ring of light rather than a
   rectangle, with the decay stairs' top edge glowing while frozen.
 - **G. Real artwork** for the splash and the icon (todo 8): the
   placeholders are a gold staircase climbing into light, drawn by a script.
 
-A, B and C were chosen and built (2026-11-06). Next candidate: D.
+A, B, C and F were chosen and built (2026-11-06); B (the footsteps) is to be reworked; E was tried and reverted. Left: D.
 
 ## Presets
 

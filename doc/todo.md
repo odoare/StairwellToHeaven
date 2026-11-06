@@ -23,9 +23,10 @@ high (blocks a release), medium, low.
 6. **ER from `RoomAcoustics`** (low). Early reflection patterns from the
    image-source model (FxmeTools `acoustics/RoomAcoustics.h`) instead of
    fixed tables, scaled by Size.
-7. **Themed GUI** (medium). A (floor indicator), B (footsteps) and C (the
-   window lights up) are built. Left: D (sparkles in Heaven), E (ascending
-   layout), F (halo Freeze);
+7. **Themed GUI** (medium). A (floor indicator), B (footsteps), C (the
+   window lights up) and F (halo Freeze) are built; E (ascending landings,
+   stone and brass knobs) was tried and reverted. B does not convince yet: to be reworked (what
+   it shows, or how). Left: D (sparkles in Heaven);
    see `architecture.md`, GUI, "Proposals around the name".
 8. **Artwork** (medium). A real splash and icon (the current ones are
    placeholders drawn by a script), then a screenshot for the README.
