@@ -2,6 +2,17 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## Pitched input: the shimmer alone (2026-11-06)
+
+Heaven gained Pitched input (0 to 100 %): the reverb's input (early
+reflections and tank) crossfaded with a pitched copy, two input
+`SplicePitchShifter`s at the two voices' intervals weighted by their
+amounts. At 100 % the original pitch leaves the wet entirely; with Mix at
+100 % only the shimmer is heard. `EngineTests` 10: a 440 Hz sine at +12
+comes out with 440 Hz 68 dB under 880 Hz at 100 %, and 66 dB over it at 0 %
+(the plain path untouched). A new preset, Only Heaven. A seventh knob in
+Motion. Not built as a plugin yet.
+
 ## Shimmer: every interval, a second voice; reflections follow Width (2026-11-06)
 
 - The shimmer interval is any semitone from -24 to +24 (49 choices, the

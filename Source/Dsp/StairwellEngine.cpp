@@ -116,9 +116,11 @@ void StairwellEngine::prepare (double sampleRate)
     er.prepare (fs);
     for (auto& line : predelay)
         line.prepare (fs, maxPredelaySeconds + 0.01f);
+    inputShifter1.prepare (fs, 1, 40.0f);
+    inputShifter2.prepare (fs, 1, 40.0f);
 
     const float coef = 1.0f - (float) std::exp (-1.0 / (kSmoothingSeconds * fs));
-    for (auto* s : { &predelaySamples, &mix, &outGain, &erGain, &lateGain, &width })
+    for (auto* s : { &predelaySamples, &mix, &outGain, &erGain, &lateGain, &width, &pitchedMix })
         s->coef = coef;
     modeFadeStep = (float) (1.0 / (kModeFadeSeconds * fs));
 
@@ -126,6 +128,7 @@ void StairwellEngine::prepare (double sampleRate)
     setParameters (params);
     predelaySamples.snap (predelaySamples.target);
     mix.snap (mix.target);
+    pitchedMix.snap (pitchedMix.target);
     outGain.snap (outGain.target);
     erGain.snap (erGain.target);
     lateGain.snap (lateGain.target);
@@ -138,6 +141,8 @@ void StairwellEngine::reset()
     tank.reset();
     er.reset();
     for (auto& line : predelay) line.reset();
+    inputShifter1.reset();
+    inputShifter2.reset();
     for (auto& f : lowCut)  f.reset();
     for (auto& f : highCut) f.reset();
     modeFade = 1.0f;
@@ -168,6 +173,16 @@ void StairwellEngine::setParameters (const Parameters& p) noexcept
 
     predelaySamples.target = (float) (std::clamp (p.predelaySeconds, 0.0f, maxPredelaySeconds) * fs);
     mix.target = std::clamp (p.mix01, 0.0f, 1.0f);
+
+    // Pitched input: Heaven only; the two voices' intervals, weighted by
+    // their amounts (voice 1 alone when both are at 0).
+    const bool heavenNow = modeVoicing (activeMode).shimmer;
+    pitchedMix.target = heavenNow ? std::clamp (p.pitchedInput01, 0.0f, 1.0f) : 0.0f;
+    inputShifter1.setPitchSemitones (std::clamp (p.shimmerSemitones, -24.0f, 24.0f));
+    inputShifter2.setPitchSemitones (std::clamp (p.shimmerSemitones2, -24.0f, 24.0f));
+    const float a1 = std::clamp (p.shimmer01, 0.0f, 1.0f), a2 = std::clamp (p.shimmer2_01, 0.0f, 1.0f);
+    inputWeight1 = a1 + a2 > 0.0f ? a1 / (a1 + a2) : 1.0f;
+    inputWeight2 = a1 + a2 > 0.0f ? a2 / (a1 + a2) : 0.0f;
     outGain.target = dbToGain (p.outDb);
     const float b = std::clamp (p.erLate01, 0.0f, 1.0f);
     erGain.target = erLevelFor (p);
@@ -212,8 +227,31 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
         const float d = predelaySamples.next();
         predelay[0].write (dryL);
         predelay[1].write (dryR);
-        const float pl = d < 2.0f ? dryL : predelay[0].read (d);
-        const float pr = d < 2.0f ? dryR : predelay[1].read (d);
+        float pl = d < 2.0f ? dryL : predelay[0].read (d);
+        float pr = d < 2.0f ? dryR : predelay[1].read (d);
+
+        // Pitched input: the shifters run while it is up (or fading), and
+        // start clean when it comes back.
+        const float pm = pitchedMix.next();
+        if (pm > 1.0e-4f)
+        {
+            if (! pitchedInputActive)
+            {
+                inputShifter1.reset();
+                inputShifter2.reset();
+                pitchedInputActive = true;
+            }
+            const float mono = 0.5f * (pl + pr);
+            // Both run, so a voice brought in later starts with live history.
+            const float pitched = inputWeight1 * inputShifter1.processSample (mono)
+                                + inputWeight2 * inputShifter2.processSample (mono);
+            pl += pm * (pitched - pl);
+            pr += pm * (pitched - pr);
+        }
+        else
+        {
+            pitchedInputActive = false;
+        }
 
         float el, eR, tl, tr;
         er.process (pl, pr, el, eR);

@@ -43,7 +43,7 @@ StairwellAudioProcessor::StairwellAudioProcessor()
     auto p = [this] (const char* id) { return apvts.getRawParameterValue (id); };
     raw = { p (mode), p (decay), p (size), p (predelay), p (predelaySync), p (predelayDiv), p (diffusion),
             p (damping), p (dampFreq), p (bass), p (crossover), p (modRate), p (modDepth), p (erLate), p (width),
-            p (lowCut), p (highCut), p (shimmer), p (shimmerPitch), p (shimmer2), p (shimmerPitch2),
+            p (lowCut), p (highCut), p (shimmer), p (shimmerPitch), p (shimmer2), p (shimmerPitch2), p (pitchedInput),
             p (freeze), p (mix), p (output) };
 }
 
@@ -93,6 +93,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout StairwellAudioProcessor::cre
     addChoice (ids::shimmerPitch, "Shimmer interval", choices::shimmerPitches, choices::defaultShimmerPitch);
     addFloat (ids::shimmer2, "Shimmer 2", Range (0.0f, 100.0f, 0.1f), 0.0f, Attr().withLabel ("%"));
     addChoice (ids::shimmerPitch2, "Shimmer 2 interval", choices::shimmerPitches, choices::defaultShimmerPitch2);
+    addFloat (ids::pitchedInput, "Pitched input", Range (0.0f, 100.0f, 0.1f), 0.0f, Attr().withLabel ("%"));
     addBool (ids::freeze, "Freeze", false);
     addFloat (ids::mix, "Mix", Range (0.0f, 100.0f, 0.1f), 30.0f, Attr().withLabel ("%"));
     addFloat (ids::output, "Output", Range (-24.0f, 24.0f, 0.1f), 0.0f, Attr().withLabel ("dB"));
@@ -136,6 +137,7 @@ sth::Parameters StairwellAudioProcessor::currentParameters() const
     const int lastPitch = sth::choices::shimmerPitches.size() - 1;
     p.shimmerSemitones = sth::choices::shimmerSemitonesFor (juce::jlimit (0, lastPitch, juce::roundToInt (raw.shimmerPitch->load())));
     p.shimmer2_01 = raw.shimmer2->load() * 0.01f;
+    p.pitchedInput01 = raw.pitchedInput->load() * 0.01f;
     p.shimmerSemitones2 = sth::choices::shimmerSemitonesFor (juce::jlimit (0, lastPitch, juce::roundToInt (raw.shimmerPitch2->load())));
     p.freeze = raw.freeze->load() > 0.5f;
     p.mix01 = raw.mix->load() * 0.01f;

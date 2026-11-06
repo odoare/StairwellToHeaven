@@ -22,6 +22,7 @@
   <PARAM id="shimmerPitch" value="12"/>
   <PARAM id="shimmer2" value="20"/>
   <PARAM id="shimmerPitch2" value="19"/>
+  <PARAM id="pitchedInput" value="0"/>
   <PARAM id="freeze" value="0"/>
   <PARAM id="mix" value="35"/>
   <PARAM id="output" value="0"/>

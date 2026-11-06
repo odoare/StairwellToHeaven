@@ -42,6 +42,9 @@ namespace sth::tips::motion
     inline constexpr auto shimmer   = "Shimmer 1 (Heaven mode). \n How much of the tail is pitched up and fed back, so it climbs as it rings.";
     inline constexpr auto shimmer2  = "Shimmer 2 (Heaven mode). \n A second pitched voice at its own interval, so the tail climbs in a chord "
                                       "(an octave and a fifth, say). The two share the feedback: together they never run away.";
+    inline constexpr auto pitchedInput = "Pitched input (Heaven mode). \n Shifts what enters the reverb too, by the voices' intervals: "
+                                         "at 100 % the original pitch is gone from the reverb, which starts at the interval and climbs "
+                                         "from there. With Mix at 100 %, only the shimmer is heard.";
     inline constexpr auto pitch     = "Shimmer 1 interval (Heaven mode), -24 to +24 semitones.";
     inline constexpr auto pitch2    = "Shimmer 2 interval (Heaven mode), -24 to +24 semitones.";
 }

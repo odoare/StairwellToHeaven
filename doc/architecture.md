@@ -158,6 +158,17 @@ leaves less headroom, so the pitched copies climb without running away
 (measured: bounded and decaying at full amount on a 20 s decay, with one
 voice and with two).
 
+**Pitched input** (Heaven, in the engine, not the tank). The shimmer lives
+in the tank's loop, so the tank's output always holds the reverb at the
+original pitch, the climbing copies on top, and nothing after the tank can
+take that pitch out again. Pitched input crossfades what enters the early
+reflections and the tank between the pre-delayed signal and a pitched copy:
+two mono `SplicePitchShifter`s at the voices' intervals, weighted by the
+voices' amounts (voice 1 alone when both are at 0). At 100 % the original
+pitch is gone from the wet (measured: a 440 Hz sine comes out 68 dB under
+its octave), and with Mix at 100 % only the shimmer is heard. The shifters
+add about 24 ms to that path only, as extra pre-delay.
+
 **Safety.** Inputs clamped (`sanitiseSample`), a branch output that goes
 bad anyway (NaN, beyond +-8) clears the tank.
 
@@ -215,6 +226,7 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
 | `shimmerPitch` | Shimmer interval | -24 .. +24 semitones (index = semitones + 24) | +12 | Heaven only |
 | `shimmer2` | Shimmer 2 | 0 .. 100 % | 0 % (off) | Heaven only, the second voice |
 | `shimmerPitch2` | Shimmer 2 interval | -24 .. +24 semitones | +7 | Heaven only |
+| `pitchedInput` | Pitched input | 0 .. 100 % | 0 % | Heaven only: the reverb's input shifted by the voices' intervals |
 | `freeze` | Freeze | off / on | off | |
 | `mix` | Mix | 0 .. 100 % | 30 % | |
 | `output` | Output | -24 .. 24 dB | 0 dB | |
@@ -278,8 +290,8 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
 - **Three rows of knobs**, named on their left: Space (Decay, Size,
   Pre-delay, Sync and its note, Diffusion), Tone (Damping, Damp freq, Bass,
   Crossover, Low cut, High cut), Motion (Mod rate, Mod depth, Early/Late,
-  Width, the two shimmer voices, and their intervals stacked in the last
-  column). Disabled when they do nothing
+  Width, the two shimmer voices, Pitched input, and the voices' intervals
+  stacked in the last column). Disabled when they do nothing
   (the pre-delay knob while synced, the note while not, the shimmer outside
   Heaven).
 - **Mix and Output** as console faders on the right.
@@ -330,7 +342,8 @@ Global presets with `fxme::PresetManager` in
 `Source/Assets/*.xml` (complete APVTS states, written by
 `tools/make_presets.py`): Init, Small Room, Concrete Stairwell, Vocal Plate,
 Big Hall, Stone Cathedral, Heavens Door, Fifth Heaven, Choir Loft (an
-octave and a fifth), Undertow (an octave and a fourth down), Synced
+octave and a fifth), Undertow (an octave and a fourth down), Only Heaven
+(Pitched input at 100 %, Mix at 100 %: the shimmer alone), Synced
 Slapback Room. No module presets (the plugin has no embeddable part).
 
 ## Threading and state

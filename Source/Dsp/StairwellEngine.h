@@ -26,7 +26,19 @@
       Heaven     the Hall, larger, with the shimmer: an octave (or any
                  interval from -24 to +24 semitones) climbing in the tail,
                  and an optional second voice at its own interval, so the
-                 tail climbs in a chord.
+                 tail climbs in a chord. Pitched input shifts what enters
+                 the reverb too (see below), up to removing the original
+                 pitch from the wet altogether.
+
+    Pitched input (Heaven). The shimmer lives in the tank's loop, so the
+    tank's output always holds the reverb at the original pitch, the climbing
+    copies on top. Pitched input crossfades what enters the early
+    reflections and the tank between the pre-delayed signal and a
+    pitch-shifted copy of it: the two voices' intervals, each through its own
+    shifter, weighted by the voices' amounts (voice 1 alone when both are at
+    0). At 100 % no original pitch reaches the wet: the tail starts at the
+    interval and climbs from there. The shifters delay that path by about
+    24 ms (half their 40 ms window), which only adds to the pre-delay.
 
     Changing the mode fades the wet out (30 ms), clears the tank and the ER
     (their delay lengths jump), applies the voicing and fades back in: no
@@ -46,6 +58,7 @@
 #include <FxmeTools/dsp/EarlyReflections.h>
 #include <FxmeTools/dsp/ModDelayLine.h>
 #include <FxmeTools/dsp/TankReverb.h>
+#include <FxmeTools/dsp/SplicePitchShifter.h>
 #include <FxmeTools/dsp/TptSvf.h>
 #include <array>
 #include <atomic>
@@ -77,6 +90,7 @@ struct Parameters
     float shimmerSemitones = 12.0f;
     float shimmer2_01 = 0.0f;       // the second voice, Heaven only (0: off)
     float shimmerSemitones2 = 7.0f;
+    float pitchedInput01 = 0.0f;    // Heaven only: how much of the reverb's input is pitched
     bool  freeze = false;
     float mix01 = 0.3f;
     float outDb = 0.0f;
@@ -165,10 +179,13 @@ private:
     fxme::TankReverb tank;
     fxme::EarlyReflections er;
     std::array<fxme::ModDelayLine, 2> predelay;
+    fxme::SplicePitchShifter inputShifter1, inputShifter2;   // Pitched input, mono
+    float inputWeight1 = 1.0f, inputWeight2 = 0.0f;
+    bool  pitchedInputActive = false;
     std::array<fxme::TptSvf, 2> lowCut, highCut;
     bool lowCutOn = false, highCutOn = false;
 
-    Smoothed predelaySamples, mix, outGain, erGain, lateGain, width;
+    Smoothed predelaySamples, mix, outGain, erGain, lateGain, width, pitchedMix;
     float erIntoTank = 0.0f;
 
     // Mode change: the wet fades out, the mode switches, it fades back in.

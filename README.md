@@ -7,7 +7,9 @@ Dattorro's), whose decay is set in seconds and shaped across frequency.
 - Five floors (modes): **Room**, **Stairwell** (hard parallel walls: a
   fluttering, ringing onset), **Plate**, **Hall**, and **Heaven**, a large
   hall whose tail climbs in pitch (shimmer: any interval from two octaves
-  down to two octaves up, and a second voice to climb in a chord).
+  down to two octaves up, a second voice to climb in a chord, and Pitched
+  input to take the original pitch out of the reverb, down to hearing the
+  shimmer alone).
 - A calibrated decay: Decay is the real RT60 in seconds; Damping makes the
   highs die faster above its frequency, Bass makes the lows ring longer or
   shorter under its crossover. The decay stairs show the result, one step
@@ -16,7 +18,7 @@ Dattorro's), whose decay is set in seconds and shaped across frequency.
   and high cut on the reverb only, Mix and Output.
 - Pre-delay in milliseconds or as a note value at the host tempo.
 - Freeze: holds the tail for ever, play over it.
-- Eleven factory presets, your own in the preset bar.
+- Twelve factory presets, your own in the preset bar.
 - VST3, AU (macOS), CLAP and a standalone application; Linux, Windows,
   macOS (universal).
 

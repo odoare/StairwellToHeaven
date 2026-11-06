@@ -17,6 +17,9 @@
          plus its time, in every mode with reflections.
       9. panAfterWidth: Width 1 keeps the pan, 0 centres it, 1.5 widens it,
          never past the edge; and it matches the levels the engine outputs.
+     10. Pitched input (Heaven, +12, the shimmer loop off): at 100 % the wet
+         holds no original pitch (a 440 Hz sine comes out at 880 Hz, the
+         440 Hz at least 30 dB under); at 0 % the original pitch dominates.
 
     Exit code 0 when everything passes.
 
@@ -267,6 +270,49 @@ int main()
         const float predicted = E::panAfterWidth (first.pan, 0.5f);
         std::printf ("     first reflection: pan %.2f, predicted at width 0.5 %.3f, heard %.3f\n", first.pan, predicted, heard);
         check (std::abs (heard - predicted) < 0.05f, "the engine agrees");
+    }
+
+    std::printf ("10. Pitched input\n");
+    {
+        auto partials = [] (float pitched, double& at440, double& at880)
+        {
+            sth::Parameters p;
+            p.mode = Mode::heaven;
+            p.shimmer01 = 0.0f;   // no climbing: only the input shift
+            p.shimmer2_01 = 0.0f;
+            p.shimmerSemitones = 12.0f;
+            p.pitchedInput01 = pitched;
+            p.mix01 = 1.0f;
+            p.decay = 1.5f;
+            sth::StairwellEngine e;
+            e.setParameters (p);
+            e.prepare (fs);
+            const int n = 96000;
+            std::vector<float> l ((size_t) n), r ((size_t) n);
+            for (int i = 0; i < n; ++i)
+                l[(size_t) i] = r[(size_t) i] = 0.3f * (float) std::sin (2.0 * 3.141592653589793 * 440.0 * i / fs);
+            for (int start = 0; start < n; start += 256)
+                e.process (l.data() + start, r.data() + start, std::min (256, n - start));
+            auto amp = [&l] (double hz)
+            {
+                double re = 0.0, im = 0.0;
+                for (int i = 48000; i < 96000; ++i)
+                {
+                    re += l[(size_t) i] * std::cos (2.0 * 3.141592653589793 * hz * i / fs);
+                    im -= l[(size_t) i] * std::sin (2.0 * 3.141592653589793 * hz * i / fs);
+                }
+                return 2.0 * std::sqrt (re * re + im * im) / 48000.0;
+            };
+            at440 = amp (440.0);
+            at880 = amp (880.0);
+        };
+        double a440, a880, b440, b880;
+        partials (1.0f, a440, a880);
+        partials (0.0f, b440, b880);
+        std::printf ("     100 %%: 440 Hz %.1f dB under 880 Hz; 0 %%: 440 Hz %.1f dB over 880 Hz\n",
+                     20.0 * std::log10 (a880 / a440), 20.0 * std::log10 (b440 / b880));
+        check (a440 < a880 * 0.0316, "100 %: the original pitch at least 30 dB under the interval");
+        check (b440 > b880 * 10.0, "0 %: the original pitch dominates");
     }
 
     std::printf (failures == 0 ? "All engine tests passed\n" : "%d engine test(s) FAILED\n", failures);

@@ -89,7 +89,7 @@ private:
     {
         std::atomic<float>* mode, * decay, * size, * predelay, * predelaySync, * predelayDiv, * diffusion,
                           * damping, * dampFreq, * bass, * crossover, * modRate, * modDepth, * erLate, * width,
-                          * lowCut, * highCut, * shimmer, * shimmerPitch, * shimmer2, * shimmerPitch2,
+                          * lowCut, * highCut, * shimmer, * shimmerPitch, * shimmer2, * shimmerPitch2, * pitchedInput,
                           * freeze, * mix, * output;
     } raw {};
 

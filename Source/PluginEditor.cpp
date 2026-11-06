@@ -90,6 +90,7 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
       widthKnob     (p.getAPVTS(), ids::width,     "Width",      theme::accent),
       shimmerKnob   (p.getAPVTS(), ids::shimmer,   "Shimmer 1",  theme::shimmer),
       shimmer2Knob  (p.getAPVTS(), ids::shimmer2,  "Shimmer 2",  theme::shimmer),
+      pitchedInputKnob (p.getAPVTS(), ids::pitchedInput, "Pitched in", theme::shimmer),
       mixFader      (p.getAPVTS(), ids::mix,       "Mix",        theme::accent),
       outputFader   (p.getAPVTS(), ids::output,    "Output",     theme::accent)
 {
@@ -149,6 +150,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     theme::styleKnob (shimmerKnob, theme::shimmer);
     setUpKnob (shimmer2Knob, tips::motion::shimmer2);
     theme::styleKnob (shimmer2Knob, theme::shimmer);
+    setUpKnob (pitchedInputKnob, tips::motion::pitchedInput);
+    theme::styleKnob (pitchedInputKnob, theme::shimmer);
     bassKnob.setCentralValue (1.0);
     widthKnob.setCentralValue (100.0);
 
@@ -239,6 +242,7 @@ void StairwellAudioProcessorEditor::timerCallback()
     enable (pitchBox, heaven);
     enable (shimmer2Knob, heaven);
     enable (pitch2Box, heaven);
+    enable (pitchedInputKnob, heaven);
 
     // The window's light: the tail's energy from -60 dB (dark) to 0 dB, up
     // fast, down slowly; frozen, a steady glow.
@@ -357,8 +361,8 @@ void StairwellAudioProcessorEditor::resized()
     // wider last column (the names are long).
     {
         auto r = motionRow.withTrimmedLeft (20);
-        const int w = r.getWidth() / 8;
-        for (auto* knob : { &modRateKnob, &modDepthKnob, &erLateKnob, &widthKnob, &shimmerKnob, &shimmer2Knob })
+        const int w = r.getWidth() / 9;
+        for (auto* knob : { &modRateKnob, &modDepthKnob, &erLateKnob, &widthKnob, &shimmerKnob, &shimmer2Knob, &pitchedInputKnob })
             knob->setBounds (r.removeFromLeft (w).reduced (2));
         auto cell = r.reduced (4, 0);
         pitchBox.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, -16));

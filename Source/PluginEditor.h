@@ -17,8 +17,8 @@
                   Freeze (a halo); centre, three rows of knobs: Space (decay, size,
                   pre-delay and its sync, diffusion), Tone (damping, its
                   frequency, bass, crossover, low and high cut), Motion
-                  (modulation, early/late, width, the two shimmer voices and
-                  their intervals);
+                  (modulation, early/late, width, the two shimmer voices,
+                  Pitched input, the voices' intervals);
                   right, the Mix and Output faders.
 
     The backdrop's light follows the reverb's tail: the window brightens as
@@ -85,7 +85,7 @@ private:
     // Tone
     fxme::FxmeSlider dampingKnob, dampFreqKnob, bassKnob, crossoverKnob, lowCutKnob, highCutKnob;
     // Motion
-    fxme::FxmeSlider modRateKnob, modDepthKnob, erLateKnob, widthKnob, shimmerKnob, shimmer2Knob;
+    fxme::FxmeSlider modRateKnob, modDepthKnob, erLateKnob, widthKnob, shimmerKnob, shimmer2Knob, pitchedInputKnob;
     juce::ComboBox pitchBox, pitch2Box;   // the two shimmer voices' intervals, stacked in one column
     // Levels
     fxme::FxmeSlider mixFader, outputFader;

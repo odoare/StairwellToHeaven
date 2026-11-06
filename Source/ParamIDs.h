@@ -39,6 +39,7 @@ namespace sth::ids
     inline constexpr auto shimmerPitch  = "shimmerPitch";
     inline constexpr auto shimmer2      = "shimmer2";
     inline constexpr auto shimmerPitch2 = "shimmerPitch2";
+    inline constexpr auto pitchedInput  = "pitchedInput";
     inline constexpr auto freeze        = "freeze";
     inline constexpr auto mix           = "mix";
     inline constexpr auto output        = "output";
