@@ -15,6 +15,8 @@
       8. The reflections a GUI draws (earlyReflectionsFor) are the ones that
          sound: with the tail off, the first one arrives at the pre-delay
          plus its time, in every mode with reflections.
+      9. panAfterWidth: Width 1 keeps the pan, 0 centres it, 1.5 widens it,
+         never past the edge; and it matches the levels the engine outputs.
 
     Exit code 0 when everything passes.
 
@@ -233,6 +235,38 @@ int main()
             ok = ok && std::abs (heard - drawn) < 0.3;
         }
         check (ok, "within 0.3 ms");
+    }
+
+    std::printf ("9. Pan after Width\n");
+    {
+        using E = sth::StairwellEngine;
+        bool ok = std::abs (E::panAfterWidth (0.6f, 1.0f) - 0.6f) < 1.0e-4f
+               && std::abs (E::panAfterWidth (-0.7f, 0.0f)) < 1.0e-4f
+               && E::panAfterWidth (0.5f, 1.5f) > 0.5f
+               && E::panAfterWidth (0.5f, 1.5f) <= 1.0f
+               && std::abs (E::panAfterWidth (-0.3f, 0.5f) + E::panAfterWidth (0.3f, 0.5f)) < 1.0e-4f;
+        check (ok, "identity at 1, centre at 0, wider at 1.5, symmetric");
+
+        // Against the engine: Room's first reflection alone (Width 0.5),
+        // its left and right levels give back the predicted pan.
+        sth::Parameters p;
+        p.mode = Mode::room;
+        p.erLate01 = 0.0f;
+        p.mix01 = 1.0f;
+        p.width01 = 0.5f;
+        p.predelaySeconds = 0.0f;
+        sth::StairwellEngine e;
+        e.setParameters (p);
+        e.prepare (fs);
+        const auto out = render (e, 2400, true);
+        const auto first = E::earlyReflectionsFor (p)[0];
+        const size_t at = (size_t) std::lround (first.ms * 0.001 * fs);
+        float l = 0.0f, r = 0.0f;
+        for (size_t i = at - 3; i <= at + 3; ++i) { l = std::max (l, std::abs (out.l[i])); r = std::max (r, std::abs (out.r[i])); }
+        const float heard = std::atan2 (r, l) / (0.25f * 3.14159265f) - 1.0f;
+        const float predicted = E::panAfterWidth (first.pan, 0.5f);
+        std::printf ("     first reflection: pan %.2f, predicted at width 0.5 %.3f, heard %.3f\n", first.pan, predicted, heard);
+        check (std::abs (heard - predicted) < 0.05f, "the engine agrees");
     }
 
     std::printf (failures == 0 ? "All engine tests passed\n" : "%d engine test(s) FAILED\n", failures);

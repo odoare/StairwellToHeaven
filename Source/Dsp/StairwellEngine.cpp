@@ -73,6 +73,19 @@ float StairwellEngine::erTimeScaleFor (Mode m, float size01) noexcept
     return v.erTimeLow + (v.erTimeHigh - v.erTimeLow) * std::clamp (size01, 0.0f, 1.0f);
 }
 
+float StairwellEngine::panAfterWidth (float pan, float width01) noexcept
+{
+    // The engine's ER: equal-power gains, angle (pan + 1) pi / 4.
+    const float angle = (std::clamp (pan, -1.0f, 1.0f) + 1.0f) * 0.25f * 3.14159265f;
+    const float l = std::cos (angle), r = std::sin (angle);
+    // Its Width step: M = (L + R) / 2, S = (L - R) / 2 x width.
+    const float m = 0.5f * (l + r), sd = 0.5f * (l - r) * std::clamp (width01, 0.0f, 1.5f);
+    const float l2 = m + sd, r2 = m - sd;
+    if (l2 <= 0.0f) return 1.0f;    // out of phase on the left: hard right
+    if (r2 <= 0.0f) return -1.0f;
+    return std::atan2 (r2, l2) / (0.25f * 3.14159265f) - 1.0f;
+}
+
 float StairwellEngine::erLevelFor (const Parameters& p) noexcept
 {
     return std::cos (std::clamp (p.erLate01, 0.0f, 1.0f) * kHalfPi);

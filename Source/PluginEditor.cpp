@@ -59,9 +59,9 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
                       juce::StringArray ("1", "2", "3", "4", juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x9e")))),
       floors (*p.getAPVTS().getParameter (ids::mode), choices::modes,
               juce::StringArray ("1", "2", "3", "4", juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x9e")))),
-      footsteps ([this]
+      reflections ([this]
                  {
-                     Footsteps::Snapshot s;
+                     ReflectionsView::Snapshot s;
                      s.params = processor.currentParameters();
                      s.inputPeakDb = processor.takeInputPeakDb();
                      return s;
@@ -124,8 +124,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     freezeAtt = attachButton (p.getAPVTS(), ids::freeze, freezeButton);
     addAndMakeVisible (freezeButton);
 
-    footsteps.setTooltip (tips::global::footsteps);
-    addAndMakeVisible (footsteps);
+    reflections.setTooltip (tips::global::reflections);
+    addAndMakeVisible (reflections);
     stairs.setTooltip (tips::global::stairs);
     addAndMakeVisible (stairs);
 
@@ -291,12 +291,11 @@ void StairwellAudioProcessorEditor::resized()
     // The knob rows are sized first; the displays get the rest.
     const int rowHeight = juce::jlimit (84, 130, (area.getHeight() - 200 - theme::margin) / 3);
 
-    // Top, across the whole width: the footsteps (the early part) on the
-    // left, the decay stairs (the tail) on the right; the climb reads left
-    // to right.
+    // Top, across the whole width: the early reflections on the left, the
+    // decay stairs (the tail) on the right.
     {
         auto display = area.removeFromTop (area.getHeight() - 3 * rowHeight - theme::margin);
-        footsteps.setBounds (display.removeFromLeft (juce::jmax (220, display.getWidth() / 3)));
+        reflections.setBounds (display.removeFromLeft (juce::jmax (220, display.getWidth() / 3)));
         display.removeFromLeft (theme::margin);
         stairs.setBounds (display);
     }

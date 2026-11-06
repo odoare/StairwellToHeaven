@@ -62,7 +62,7 @@ public:
     float getTailEnergyDb() noexcept     { return engine.getTailEnergyDb().load (std::memory_order_relaxed); }
 
     /** The input's peak in dB since the last call (which resets it), for
-        the footsteps' onsets. Message thread, one caller. */
+        the reflections view's onsets. Message thread, one caller. */
     float takeInputPeakDb() noexcept
     {
         const float p = engine.takeInputPeak();

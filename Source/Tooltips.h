@@ -53,9 +53,9 @@ namespace sth::tips::global
     inline constexpr auto stairs    = "The decay stairs: one step per third of an octave, its height the time the tail lasts there. "
                                       "Damping lowers the steps on the right, Bass raises or lowers them on the left. "
                                       "The light at the top is the tail itself.";
-    inline constexpr auto footsteps = "The early reflections as footsteps up the first flight: time to the right, one footprint "
-                                      "per reflection (its size the level, left or right foot by its side, darker when duller). "
-                                      "The gap before the first is the pre-delay. They light up in turn when a sound starts.";
+    inline constexpr auto reflections = "The early reflections: time runs up from the dry sound at the bottom, one circle per "
+                                        "reflection, left or right as it is heard (its size the level, darker when duller). "
+                                        "The dashed stretch is the pre-delay. They light up in turn when a sound starts.";
     inline constexpr auto floorIndicator = "The floor sounding now. An arrow lights while the reverb travels to another "
                                            "floor (it fades out, switches and fades back in: the tail is cleared).";
     inline constexpr auto tooltips  = "Hover help on the controls: on or off.";

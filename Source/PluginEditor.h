@@ -7,8 +7,8 @@
       top bar     name, version, the preset bar with its browser, the "?"
                   (hover help on/off) and the info button; the icon opens
                   the splash.
-      top         across the whole width: the footsteps (the early
-                  reflections climbing the first flight, time to the right)
+      top         across the whole width: the early reflections (time up,
+                  one circle per reflection placed by its pan)
                   and the decay stairs (RT60 against frequency, with the
                   tail's light above).
       under them  left, the floor indicator (the floor sounding, an arrow
@@ -42,7 +42,7 @@
 #include "Components/DecayStairs.h"
 #include "Components/FloorSelector.h"
 #include "Components/FloorIndicator.h"
-#include "Components/Footsteps.h"
+#include "Components/ReflectionsView.h"
 #include "Components/HaloButton.h"
 
 class StairwellAudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -74,7 +74,7 @@ private:
     FloorIndicator floorIndicator;
     FloorSelector floors;
     HaloButton freezeButton { "Freeze" };
-    Footsteps footsteps;
+    ReflectionsView reflections;
     DecayStairs stairs;
 
     // Space

@@ -2,6 +2,15 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## 7 (part). Early reflections view replaces the footsteps (2026-11-06)
+
+The footsteps did not convince: `Components/Footsteps` became
+`Components/ReflectionsView`. Time now runs from the bottom (the dry sound)
+to the top, each reflection a circle placed left or right by its pan, sized
+by its level, darker when duller; the pre-delay a dashed stretch up the
+centre. The sweep on input onsets is kept as it was (now bottom to top).
+Not built as a plugin yet.
+
 ## 7 (part). Themed GUI: halo Freeze (2026-11-06)
 
 Proposal F of `architecture.md`: Freeze as a halo (`Components/HaloButton`),

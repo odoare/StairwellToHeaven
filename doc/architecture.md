@@ -55,7 +55,7 @@ StairwellToHeaven/
     Components/DecayStairs.*    the decay display
     Components/FloorSelector.*  the mode selector (lift panel)
     Components/FloorIndicator.* the lift's floor display above it
-    Components/Footsteps.*      the early reflections as footsteps
+    Components/ReflectionsView.* the early reflections (time up, pan across)
     Components/HaloButton.*     Freeze, as a halo
     Assets/                 logo, icon, splash, factory presets (*.xml)
   Tests/EngineTests.cpp     headless engine tests (FxmeCore only)
@@ -240,26 +240,27 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   decay stairs' frozen edge, so the two breathe together. A latching
   `juce::Button` bound by a ButtonAttachment; its breathing timer runs only
   while on.
-- **The layout**: the two displays (footsteps, then the decay stairs) across
+- **The layout**: the two displays (early reflections, then the decay stairs) across
   the whole width under the top bar; under them, the floors on the left, the
   knob rows in the centre, the faders on the right.
-- **The footsteps** (top, left of the stairs, `Footsteps`): the early
-  reflections climbing the first flight. Time runs to the right, from the
-  dry sound to a round number of milliseconds past the last reflection; the
-  path climbs a faint staircase as it goes. One footprint per reflection:
-  its size the level, left or right foot by its pan, darker the more it is
-  low-passed; the whole walk fades as Early/Late moves toward the tail. The
-  pre-delay is a dashed stretch before the first step. On every onset of the
+- **The early reflections** (top, left of the stairs, `ReflectionsView`):
+  time runs up, from the dry sound at the bottom (a small dot, centred) to a
+  round number of milliseconds past the last reflection (labelled on the
+  left). Each reflection is a circle placed across by its pan (L to R, as it
+  is heard): its size the level, darker the more it is low-passed; the
+  whole picture fades as Early/Late moves toward the tail. The pre-delay is
+  a dashed stretch up the centre before the first one. On every onset of the
   input (its peak 4 dB over its own recent average, and above -50 dB), the
-  footprints light up in turn over half a second (slowed down: the real ones
-  take tens of milliseconds); a new onset restarts the walk once the sweep is
-  mostly done. The engine holds the input's peak until the GUI takes it
-  (`takeInputPeak`), so no hit between two timer ticks is missed. The
-  Stairwell's flutter reads as an even stride, the Room's as short and
-  irregular, the Hall's as long and sparse, the Plate's as two faint steps.
-  The taps come from `StairwellEngine::earlyReflectionsFor`, the ones the
-  engine plays; an engine test checks that the first one drawn is heard
-  within 0.3 ms of where it is drawn.
+  circles light up in turn from the bottom over half a second (slowed down:
+  the real ones take tens of milliseconds); a new onset restarts the sweep
+  once it is mostly done. The engine holds the input's peak until the GUI
+  takes it (`takeInputPeak`), so no hit between two timer ticks is missed.
+  The Stairwell's flutter reads as an even ladder swinging left and right,
+  the Room's as short and irregular, the Hall's as tall and sparse, the
+  Plate's as two faint circles near the bottom. The taps come from
+  `StairwellEngine::earlyReflectionsFor`, the ones the engine plays; an
+  engine test checks that the first one drawn is heard within 0.3 ms of
+  where it is drawn.
 - **The decay stairs** (top centre, `DecayStairs`): RT60 against frequency as
   a staircase, one step per third of an octave, stone at the bottom turning
   gold as it rises; each tread lit. Damping lowers the right of the flight,
@@ -293,7 +294,7 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
   showing the floor ("1" to "4", an infinity sign for Heaven), with an up or
   down arrow lit while a mode change fades. Cheap, and it makes the mode
   change (which clears the tail) visible.
-- **B. Footsteps on the stairs.** (Built, see above.) The early reflections drawn as marks on the
+- **B. Footsteps on the stairs.** (Built, then replaced by the early reflections view above: circles, time up, pan across.) The early reflections drawn as marks on the
   first steps (time to the right, level as size): the Stairwell floor's
   flutter reads as regular footsteps, the Hall's as sparse ones. Needs the
   ER pattern and time scale exposed to the display (the core already has
@@ -313,7 +314,7 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
 - **G. Real artwork** for the splash and the icon (todo 8): the
   placeholders are a gold staircase climbing into light, drawn by a script.
 
-A, B, C and F were chosen and built (2026-11-06); B (the footsteps) is to be reworked; E was tried and reverted. Left: D.
+A, B, C and F were chosen and built (2026-11-06), B reworked into the early reflections view; E was tried and reverted. Left: D.
 
 ## Presets
 
@@ -329,8 +330,8 @@ Room. No module presets (the plugin has no embeddable part).
 - Audio thread: `processBlock` reads the parameters (raw atomics) into one
   `sth::Parameters`, resolves a synced pre-delay against the host tempo,
   and runs the engine. No allocation, no locks.
-- Message thread: the editor's components poll on timers (the footsteps
-  take the input's held peak, an atomic exchange); the decay stairs
+- Message thread: the editor's components poll on timers (the reflections
+  view takes the input's held peak, an atomic exchange); the decay stairs
   call `currentParameters()` (atomics) and `TankReverb::rt60At()`, and read
   the engine's tail energy (an atomic); the floor indicator reads the
   engine's active floor and mode fade (atomics); the editor reads the tail

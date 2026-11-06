@@ -108,6 +108,13 @@ public:
     using Reflections = std::array<Reflection, fxme::EarlyReflections::numTaps>;
     static Reflections earlyReflectionsFor (const Parameters& p) noexcept;
 
+    /** Where a reflection panned `pan` (-1 .. 1, equal power) is heard once
+        Width (0 .. 1.5) has scaled the wet's side signal: the pan whose
+        equal-power gains match the left and right levels after the M/S
+        step. Width 1 leaves it, 0 centres it; past 1 it spreads, up to the
+        edge (where one side would go out of phase, it stays at the edge). */
+    static float panAfterWidth (float pan, float width01) noexcept;
+
     /** The time scale Size gives the mode's reflection pattern. */
     static float erTimeScaleFor (Mode m, float size01) noexcept;
 
@@ -128,7 +135,7 @@ public:
 
     /** The input's peak (linear) since the last call, which resets it: the
         GUI polls it on a timer slower than the blocks, so the peak is held
-        until taken and no hit is missed. The footsteps walk on its onsets. */
+        until taken and no hit is missed. The reflections view sweeps on its onsets. */
     float takeInputPeak() noexcept { return inputPeakHold.exchange (0.0f, std::memory_order_relaxed); }
 
     /** The floor actually sounding (it lags the parameter during a mode
