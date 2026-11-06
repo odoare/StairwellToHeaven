@@ -23,8 +23,10 @@
                  diffusion (a ringing, metallic onset), brighter.
       Plate      high diffusion, fast build-up, bright, no ER to speak of.
       Hall       lower input diffusion, long delays, darker, sparse late ER.
-      Heaven     the Hall, larger, with the shimmer: an octave (or the
-                 chosen interval) climbing in the tail.
+      Heaven     the Hall, larger, with the shimmer: an octave (or any
+                 interval from -24 to +24 semitones) climbing in the tail,
+                 and an optional second voice at its own interval, so the
+                 tail climbs in a chord.
 
     Changing the mode fades the wet out (30 ms), clears the tank and the ER
     (their delay lengths jump), applies the voicing and fades back in: no
@@ -73,6 +75,8 @@ struct Parameters
     float highCutHz = 20000.0f;
     float shimmer01 = 0.5f;         // Heaven only
     float shimmerSemitones = 12.0f;
+    float shimmer2_01 = 0.0f;       // the second voice, Heaven only (0: off)
+    float shimmerSemitones2 = 7.0f;
     bool  freeze = false;
     float mix01 = 0.3f;
     float outDb = 0.0f;

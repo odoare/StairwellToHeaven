@@ -15,10 +15,15 @@ DEFAULTS = {
     "mode": 3, "decay": 2.5, "size": 50, "predelay": 20, "predelaySync": 0, "predelayDiv": 5,
     "diffusion": 80, "damping": 40, "dampFreq": 5000, "bass": 1.2, "crossover": 300,
     "modRate": 0.7, "modDepth": 30, "erLate": 60, "width": 100, "lowCut": 20, "highCut": 20000,
-    "shimmer": 50, "shimmerPitch": 0, "freeze": 0, "mix": 30, "output": 0,
+    "shimmer": 50, "shimmerPitch": 36, "shimmer2": 0, "shimmerPitch2": 31,
+    "freeze": 0, "mix": 30, "output": 0,
 }
 
 ROOM, STAIRWELL, PLATE, HALL, HEAVEN = range(5)
+
+def pitch(semitones):
+    """The shimmer interval choice for a number of semitones (-24 .. +24)."""
+    return semitones + 24
 
 PRESETS = {
     "Init": {},
@@ -32,10 +37,15 @@ PRESETS = {
                      dampFreq=4500, bass=1.4, mix=30),
     "Stone Cathedral": dict(mode=HALL, decay=8.0, size=100, predelay=45, diffusion=70, damping=60,
                             dampFreq=3500, bass=1.8, crossover=250, modDepth=20, mix=35),
-    "Heavens Door": dict(mode=HEAVEN, decay=6.0, size=80, predelay=40, shimmer=55, shimmerPitch=0,
+    "Heavens Door": dict(mode=HEAVEN, decay=6.0, size=80, predelay=40, shimmer=55, shimmerPitch=pitch(12),
                          damping=30, dampFreq=6000, lowCut=200, mix=40),
-    "Fifth Heaven": dict(mode=HEAVEN, decay=9.0, size=90, predelay=30, shimmer=45, shimmerPitch=1,
+    "Fifth Heaven": dict(mode=HEAVEN, decay=9.0, size=90, predelay=30, shimmer=45, shimmerPitch=pitch(7),
                          modDepth=40, damping=35, lowCut=150, mix=40),
+    "Choir Loft": dict(mode=HEAVEN, decay=7.0, size=85, predelay=35, shimmer=40, shimmerPitch=pitch(12),
+                       shimmer2=30, shimmerPitch2=pitch(7), damping=40, dampFreq=5500, lowCut=180,
+                       modDepth=35, mix=40),
+    "Undertow": dict(mode=HEAVEN, decay=10.0, size=100, predelay=20, shimmer=35, shimmerPitch=pitch(-12),
+                     shimmer2=20, shimmerPitch2=pitch(-5), damping=55, dampFreq=4000, bass=1.6, mix=35),
     "Synced Slapback Room": dict(mode=ROOM, decay=1.2, size=55, predelaySync=1, predelayDiv=8,
                                  erLate=50, mix=30),
 }

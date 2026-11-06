@@ -88,7 +88,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
       modDepthKnob  (p.getAPVTS(), ids::modDepth,  "Mod depth",  theme::accent),
       erLateKnob    (p.getAPVTS(), ids::erLate,    "Early/Late", theme::accent),
       widthKnob     (p.getAPVTS(), ids::width,     "Width",      theme::accent),
-      shimmerKnob   (p.getAPVTS(), ids::shimmer,   "Shimmer",    theme::shimmer),
+      shimmerKnob   (p.getAPVTS(), ids::shimmer,   "Shimmer 1",  theme::shimmer),
+      shimmer2Knob  (p.getAPVTS(), ids::shimmer2,  "Shimmer 2",  theme::shimmer),
       mixFader      (p.getAPVTS(), ids::mix,       "Mix",        theme::accent),
       outputFader   (p.getAPVTS(), ids::output,    "Output",     theme::accent)
 {
@@ -146,6 +147,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     setUpKnob (widthKnob, tips::motion::width);
     setUpKnob (shimmerKnob, tips::motion::shimmer);
     theme::styleKnob (shimmerKnob, theme::shimmer);
+    setUpKnob (shimmer2Knob, tips::motion::shimmer2);
+    theme::styleKnob (shimmer2Knob, theme::shimmer);
     bassKnob.setCentralValue (1.0);
     widthKnob.setCentralValue (100.0);
 
@@ -166,6 +169,12 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     pitchBox.setTooltip (tips::motion::pitch);
     pitchAtt = std::make_unique<ComboAttachment> (p.getAPVTS(), ids::shimmerPitch, pitchBox);
     addAndMakeVisible (pitchBox);
+
+    pitch2Box.addItemList (choices::shimmerPitches, 1);
+    theme::styleCombo (pitch2Box, theme::shimmer);
+    pitch2Box.setTooltip (tips::motion::pitch2);
+    pitch2Att = std::make_unique<ComboAttachment> (p.getAPVTS(), ids::shimmerPitch2, pitch2Box);
+    addAndMakeVisible (pitch2Box);
 
     setUpFader (mixFader, tips::global::mix);
     setUpFader (outputFader, tips::global::output);
@@ -228,6 +237,8 @@ void StairwellAudioProcessorEditor::timerCallback()
     enable (divisionBox, synced);
     enable (shimmerKnob, heaven);
     enable (pitchBox, heaven);
+    enable (shimmer2Knob, heaven);
+    enable (pitch2Box, heaven);
 
     // The window's light: the tail's energy from -60 dB (dark) to 0 dB, up
     // fast, down slowly; frozen, a steady glow.
@@ -342,11 +353,15 @@ void StairwellAudioProcessorEditor::resized()
         divisionBox.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, 16));
     }
     layoutRow (toneRow, { &dampingKnob, &dampFreqKnob, &bassKnob, &crossoverKnob, &lowCutKnob, &highCutKnob });
-    layoutRow (motionRow, { &modRateKnob, &modDepthKnob, &erLateKnob, &widthKnob, &shimmerKnob, nullptr });
+    // Motion: the two shimmer voices, then their intervals stacked in a
+    // wider last column (the names are long).
     {
         auto r = motionRow.withTrimmedLeft (20);
-        const int w = r.getWidth() / 6;
-        auto cell = r.withX (r.getX() + 5 * w).withWidth (w).reduced (4, 0);
-        pitchBox.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24));
+        const int w = r.getWidth() / 8;
+        for (auto* knob : { &modRateKnob, &modDepthKnob, &erLateKnob, &widthKnob, &shimmerKnob, &shimmer2Knob })
+            knob->setBounds (r.removeFromLeft (w).reduced (2));
+        auto cell = r.reduced (4, 0);
+        pitchBox.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, -16));
+        pitch2Box.setBounds (cell.withSizeKeepingCentre (cell.getWidth(), 24).translated (0, 16));
     }
 }

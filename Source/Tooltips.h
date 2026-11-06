@@ -39,8 +39,11 @@ namespace sth::tips::motion
     inline constexpr auto modDepth  = "Modulation depth. \n How far they drift: a little is lush, a lot is a chorus.";
     inline constexpr auto erLate    = "Early / Late. \n Balance between the first reflections (the walls) and the diffuse tail.";
     inline constexpr auto width     = "Width. \n Stereo spread of the reverb: 0 is mono, 150 % wider than the source.";
-    inline constexpr auto shimmer   = "Shimmer (Heaven mode). \n How much of the tail is pitched up and fed back, so it climbs as it rings.";
-    inline constexpr auto pitch     = "Shimmer interval (Heaven mode).";
+    inline constexpr auto shimmer   = "Shimmer 1 (Heaven mode). \n How much of the tail is pitched up and fed back, so it climbs as it rings.";
+    inline constexpr auto shimmer2  = "Shimmer 2 (Heaven mode). \n A second pitched voice at its own interval, so the tail climbs in a chord "
+                                      "(an octave and a fifth, say). The two share the feedback: together they never run away.";
+    inline constexpr auto pitch     = "Shimmer 1 interval (Heaven mode), -24 to +24 semitones.";
+    inline constexpr auto pitch2    = "Shimmer 2 interval (Heaven mode), -24 to +24 semitones.";
 }
 
 namespace sth::tips::global

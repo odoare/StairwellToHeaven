@@ -149,10 +149,14 @@ still sounds in the space. Safety net: a soft limit on each branch's output
 (identity to 1, then 1 + tanh (|x| - 1)).
 
 **Shimmer** (Heaven). The tank's output, high-passed at 400 Hz, through
-`SplicePitchShifter` (+12 by default; +7, +19, +24, -12), fed back to the
-tank's input. Its gain is Shimmer x 0.9 x (1 - loop gain): a long decay
+`SplicePitchShifter` (+12 by default, any interval from -24 to +24
+semitones), fed back to the tank's input. A second voice (its own shifter
+and interval, off by default) climbs alongside, so the tail can rise in a
+chord; the two voices share the loop's headroom (their gains sum to at
+most one full voice's). Its gain is Shimmer x 0.9 x (1 - loop gain): a long decay
 leaves less headroom, so the pitched copies climb without running away
-(measured: bounded and decaying at full amount on a 20 s decay).
+(measured: bounded and decaying at full amount on a 20 s decay, with one
+voice and with two).
 
 **Safety.** Inputs clamped (`sanitiseSample`), a branch output that goes
 bad anyway (NaN, beyond +-8) clears the tank.
@@ -207,8 +211,10 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
 | `width` | Width | 0 .. 150 % | 100 % | M/S on the wet |
 | `lowCut` | Low cut | 20 .. 1000 Hz | 20 (off) | wet only |
 | `highCut` | High cut | 1 .. 20 kHz | 20 kHz (off) | wet only |
-| `shimmer` | Shimmer | 0 .. 100 % | 50 % | Heaven only |
-| `shimmerPitch` | Shimmer interval | +12, +7, +19, +24, -12 | +12 | Heaven only |
+| `shimmer` | Shimmer 1 | 0 .. 100 % | 50 % | Heaven only |
+| `shimmerPitch` | Shimmer interval | -24 .. +24 semitones (index = semitones + 24) | +12 | Heaven only |
+| `shimmer2` | Shimmer 2 | 0 .. 100 % | 0 % (off) | Heaven only, the second voice |
+| `shimmerPitch2` | Shimmer 2 interval | -24 .. +24 semitones | +7 | Heaven only |
 | `freeze` | Freeze | off / on | off | |
 | `mix` | Mix | 0 .. 100 % | 30 % | |
 | `output` | Output | -24 .. 24 dB | 0 dB | |
@@ -272,7 +278,8 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
 - **Three rows of knobs**, named on their left: Space (Decay, Size,
   Pre-delay, Sync and its note, Diffusion), Tone (Damping, Damp freq, Bass,
   Crossover, Low cut, High cut), Motion (Mod rate, Mod depth, Early/Late,
-  Width, Shimmer and its interval). Disabled when they do nothing
+  Width, the two shimmer voices, and their intervals stacked in the last
+  column). Disabled when they do nothing
   (the pre-delay knob while synced, the note while not, the shimmer outside
   Heaven).
 - **Mix and Output** as console faders on the right.
@@ -322,8 +329,9 @@ Global presets with `fxme::PresetManager` in
 `FX-Mechanics/StairwellToHeaven/Presets`; factory presets embedded from
 `Source/Assets/*.xml` (complete APVTS states, written by
 `tools/make_presets.py`): Init, Small Room, Concrete Stairwell, Vocal Plate,
-Big Hall, Stone Cathedral, Heavens Door, Fifth Heaven, Synced Slapback
-Room. No module presets (the plugin has no embeddable part).
+Big Hall, Stone Cathedral, Heavens Door, Fifth Heaven, Choir Loft (an
+octave and a fifth), Undertow (an octave and a fourth down), Synced
+Slapback Room. No module presets (the plugin has no embeddable part).
 
 ## Threading and state
 

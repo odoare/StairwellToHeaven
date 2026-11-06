@@ -17,7 +17,8 @@
                   Freeze (a halo); centre, three rows of knobs: Space (decay, size,
                   pre-delay and its sync, diffusion), Tone (damping, its
                   frequency, bass, crossover, low and high cut), Motion
-                  (modulation, early/late, width, shimmer and its interval);
+                  (modulation, early/late, width, the two shimmer voices and
+                  their intervals);
                   right, the Mix and Output faders.
 
     The backdrop's light follows the reverb's tail: the window brightens as
@@ -84,15 +85,15 @@ private:
     // Tone
     fxme::FxmeSlider dampingKnob, dampFreqKnob, bassKnob, crossoverKnob, lowCutKnob, highCutKnob;
     // Motion
-    fxme::FxmeSlider modRateKnob, modDepthKnob, erLateKnob, widthKnob, shimmerKnob;
-    juce::ComboBox pitchBox;
+    fxme::FxmeSlider modRateKnob, modDepthKnob, erLateKnob, widthKnob, shimmerKnob, shimmer2Knob;
+    juce::ComboBox pitchBox, pitch2Box;   // the two shimmer voices' intervals, stacked in one column
     // Levels
     fxme::FxmeSlider mixFader, outputFader;
 
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
     using ComboAttachment  = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     std::unique_ptr<ButtonAttachment> freezeAtt, syncAtt;
-    std::unique_ptr<ComboAttachment> divisionAtt, pitchAtt;
+    std::unique_ptr<ComboAttachment> divisionAtt, pitchAtt, pitch2Att;
 
     juce::Rectangle<int> spaceRow, toneRow, motionRow;
 

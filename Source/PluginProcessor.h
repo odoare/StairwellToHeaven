@@ -89,7 +89,8 @@ private:
     {
         std::atomic<float>* mode, * decay, * size, * predelay, * predelaySync, * predelayDiv, * diffusion,
                           * damping, * dampFreq, * bass, * crossover, * modRate, * modDepth, * erLate, * width,
-                          * lowCut, * highCut, * shimmer, * shimmerPitch, * freeze, * mix, * output;
+                          * lowCut, * highCut, * shimmer, * shimmerPitch, * shimmer2, * shimmerPitch2,
+                          * freeze, * mix, * output;
     } raw {};
 
     std::atomic<double> hostBpm { 120.0 };

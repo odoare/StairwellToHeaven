@@ -19,7 +19,9 @@
   <PARAM id="lowCut" value="20"/>
   <PARAM id="highCut" value="20000"/>
   <PARAM id="shimmer" value="50"/>
-  <PARAM id="shimmerPitch" value="0"/>
+  <PARAM id="shimmerPitch" value="36"/>
+  <PARAM id="shimmer2" value="0"/>
+  <PARAM id="shimmerPitch2" value="31"/>
   <PARAM id="freeze" value="0"/>
   <PARAM id="mix" value="30"/>
   <PARAM id="output" value="0"/>

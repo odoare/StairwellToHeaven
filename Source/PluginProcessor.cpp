@@ -43,7 +43,8 @@ StairwellAudioProcessor::StairwellAudioProcessor()
     auto p = [this] (const char* id) { return apvts.getRawParameterValue (id); };
     raw = { p (mode), p (decay), p (size), p (predelay), p (predelaySync), p (predelayDiv), p (diffusion),
             p (damping), p (dampFreq), p (bass), p (crossover), p (modRate), p (modDepth), p (erLate), p (width),
-            p (lowCut), p (highCut), p (shimmer), p (shimmerPitch), p (freeze), p (mix), p (output) };
+            p (lowCut), p (highCut), p (shimmer), p (shimmerPitch), p (shimmer2), p (shimmerPitch2),
+            p (freeze), p (mix), p (output) };
 }
 
 StairwellAudioProcessor::~StairwellAudioProcessor() = default;
@@ -89,7 +90,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout StairwellAudioProcessor::cre
     addFloat (ids::highCut, "High cut", Range (1000.0f, 20000.0f, 1.0f, 0.3f), 20000.0f,
               Attr().withStringFromValueFunction ([] (float v, int n) { return v >= sth::StairwellEngine::highCutOffHz ? juce::String ("Off") : hz (v, n); }));
     addFloat (ids::shimmer, "Shimmer", Range (0.0f, 100.0f, 0.1f), 50.0f, Attr().withLabel ("%"));
-    addChoice (ids::shimmerPitch, "Shimmer interval", choices::shimmerPitches, 0);
+    addChoice (ids::shimmerPitch, "Shimmer interval", choices::shimmerPitches, choices::defaultShimmerPitch);
+    addFloat (ids::shimmer2, "Shimmer 2", Range (0.0f, 100.0f, 0.1f), 0.0f, Attr().withLabel ("%"));
+    addChoice (ids::shimmerPitch2, "Shimmer 2 interval", choices::shimmerPitches, choices::defaultShimmerPitch2);
     addBool (ids::freeze, "Freeze", false);
     addFloat (ids::mix, "Mix", Range (0.0f, 100.0f, 0.1f), 30.0f, Attr().withLabel ("%"));
     addFloat (ids::output, "Output", Range (-24.0f, 24.0f, 0.1f), 0.0f, Attr().withLabel ("dB"));
@@ -130,8 +133,10 @@ sth::Parameters StairwellAudioProcessor::currentParameters() const
     p.lowCutHz = raw.lowCut->load();
     p.highCutHz = raw.highCut->load();
     p.shimmer01 = raw.shimmer->load() * 0.01f;
-    const int pitch = juce::jlimit (0, sth::choices::shimmerPitches.size() - 1, juce::roundToInt (raw.shimmerPitch->load()));
-    p.shimmerSemitones = sth::choices::shimmerSemitones[pitch];
+    const int lastPitch = sth::choices::shimmerPitches.size() - 1;
+    p.shimmerSemitones = sth::choices::shimmerSemitonesFor (juce::jlimit (0, lastPitch, juce::roundToInt (raw.shimmerPitch->load())));
+    p.shimmer2_01 = raw.shimmer2->load() * 0.01f;
+    p.shimmerSemitones2 = sth::choices::shimmerSemitonesFor (juce::jlimit (0, lastPitch, juce::roundToInt (raw.shimmerPitch2->load())));
     p.freeze = raw.freeze->load() > 0.5f;
     p.mix01 = raw.mix->load() * 0.01f;
     p.outDb = raw.output->load();

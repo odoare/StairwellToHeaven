@@ -2,6 +2,22 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## Shimmer: every interval, a second voice; reflections follow Width (2026-11-06)
+
+- The shimmer interval is any semitone from -24 to +24 (49 choices, the
+  musical ones named), instead of five.
+- A second shimmer voice (Shimmer 2, its own interval, off by default):
+  `fxme::TankReverb` gained `shimmer2` / `shimmerSemitones2` (a second
+  `SplicePitchShifter`); the two voices share the loop's headroom, and
+  `CoreReverbTests` checks both at full stay bounded and decay. In the GUI:
+  a second knob, the two interval menus stacked in Motion's last column.
+- Presets regenerated (interval indices changed; nothing released, so no
+  migration), two new ones using both voices: Choir Loft, Undertow.
+- The early reflections view places each circle where it is heard after
+  Width (`StairwellEngine::panAfterWidth`, checked against the engine's
+  output in `EngineTests` 9).
+- Not built as a plugin yet. MIDI-driven intervals: todo 12.
+
 ## 7 (part). Early reflections view replaces the footsteps (2026-11-06)
 
 The footsteps did not convince: `Components/Footsteps` became

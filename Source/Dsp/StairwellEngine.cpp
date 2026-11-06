@@ -63,6 +63,8 @@ fxme::TankReverb::Settings StairwellEngine::tankSettingsFor (const Parameters& p
     s.freeze = p.freeze;
     s.shimmer = v.shimmer ? std::clamp (p.shimmer01, 0.0f, 1.0f) : 0.0f;
     s.shimmerSemitones = p.shimmerSemitones;
+    s.shimmer2 = v.shimmer ? std::clamp (p.shimmer2_01, 0.0f, 1.0f) : 0.0f;
+    s.shimmerSemitones2 = p.shimmerSemitones2;
     s.voicing = v.tank;
     return s;
 }

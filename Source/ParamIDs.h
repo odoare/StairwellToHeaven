@@ -37,6 +37,8 @@ namespace sth::ids
     inline constexpr auto highCut       = "highCut";
     inline constexpr auto shimmer       = "shimmer";
     inline constexpr auto shimmerPitch  = "shimmerPitch";
+    inline constexpr auto shimmer2      = "shimmer2";
+    inline constexpr auto shimmerPitch2 = "shimmerPitch2";
     inline constexpr auto freeze        = "freeze";
     inline constexpr auto mix           = "mix";
     inline constexpr auto output        = "output";
@@ -56,7 +58,35 @@ namespace sth::choices
                                                   1.0f / 3, 3.0f / 8, 1.0f / 2 };
     inline constexpr int defaultDivision = 5;   // 1/16
 
-    /** The shimmer's interval, and its semitones. */
-    inline const juce::StringArray shimmerPitches { "+12 octave", "+7 fifth", "+19 oct. + fifth", "+24 two oct.", "-12 octave down" };
-    inline constexpr float shimmerSemitones[] { 12.0f, 7.0f, 19.0f, 24.0f, -12.0f };
+    /** The shimmer voices' intervals: every semitone from -24 to +24, the
+        musical ones named ("+7 fifth", "-12 octave down"). The index is the
+        interval plus 24. */
+    inline constexpr int minShimmerSemitones = -24, maxShimmerSemitones = 24;
+
+    inline juce::String shimmerPitchName (int semitones)
+    {
+        static const char* const names[] { "unison", "minor 2nd", "major 2nd", "minor 3rd", "major 3rd", "fourth",
+                                           "tritone", "fifth", "minor 6th", "major 6th", "minor 7th", "major 7th" };
+        const int a = std::abs (semitones), octaves = a / 12, step = a % 12;
+        juce::String name;
+        if (step == 0)
+            name = octaves == 0 ? "unison" : (octaves == 1 ? "octave" : "two octaves");
+        else
+            name = (octaves > 0 ? "oct. + " : "") + juce::String (names[step]);
+        const auto sign = semitones > 0 ? "+" : (semitones < 0 ? "-" : "");
+        return juce::String (sign) + juce::String (a) + " " + name + (semitones < 0 ? " down" : "");
+    }
+
+    inline const juce::StringArray shimmerPitches = []
+    {
+        juce::StringArray list;
+        for (int st = minShimmerSemitones; st <= maxShimmerSemitones; ++st)
+            list.add (shimmerPitchName (st));
+        return list;
+    }();
+
+    inline float shimmerSemitonesFor (int index) { return (float) (minShimmerSemitones + index); }
+    inline constexpr int pitchIndexFor (int semitones) { return semitones - minShimmerSemitones; }
+    inline constexpr int defaultShimmerPitch  = pitchIndexFor (12);   // an octave up
+    inline constexpr int defaultShimmerPitch2 = pitchIndexFor (7);    // a fifth up
 }

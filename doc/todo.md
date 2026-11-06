@@ -37,3 +37,12 @@ high (blocks a release), medium, low.
 11. **Stereo into the tank** (low). The tank takes (L+R)/2, as Dattorro's;
     feeding L and R into the two branches would keep more of the source's
     image in the tail. Changes the sound: a voicing option, not a default.
+12. **MIDI-driven shimmer intervals** (medium). The intervals from the notes
+    played: Follow (the last held note minus a Root note parameter sets
+    voice 1's interval, gliding) and Chord (up to the two voices, one per
+    held note); with no note held, the fixed intervals. Costs: the plugin
+    takes MIDI in, so the AU becomes `kAudioUnitType_MusicEffect` (its
+    identity changes: decide before the first release), a per-host MIDI
+    routing section in the README (Live cannot route MIDI to an audio effect
+    on an audio track). Held-note tracking: Mango's `HeldNotes.h` (LGPL)
+    could move to FxmeTools core. Root note default to decide (C3, C4).
