@@ -7,16 +7,18 @@
       top bar     name, version, the preset bar with its browser, the "?"
                   (hover help on/off) and the info button; the icon opens
                   the splash.
-      left        the floor indicator (the floor sounding, an arrow while a
-                  mode change travels), the floor selector (the mode, as a
-                  lift panel: Room at the bottom, Heaven at the top) and
-                  Freeze under it.
-      centre      the decay stairs (RT60 against frequency, with the tail's
-                  light above), then three rows of knobs: Space (decay, size,
+      top         across the whole width: the footsteps (the early
+                  reflections climbing the first flight, time to the right)
+                  and the decay stairs (RT60 against frequency, with the
+                  tail's light above).
+      under them  left, the floor indicator (the floor sounding, an arrow
+                  while a mode change travels), the floor selector (the mode,
+                  as a lift panel: Room at the bottom, Heaven at the top) and
+                  Freeze; centre, three rows of knobs: Space (decay, size,
                   pre-delay and its sync, diffusion), Tone (damping, its
                   frequency, bass, crossover, low and high cut), Motion
-                  (modulation, early/late, width, shimmer and its interval).
-      right       Mix and Output faders.
+                  (modulation, early/late, width, shimmer and its interval);
+                  right, the Mix and Output faders.
 
     The backdrop's light follows the reverb's tail: the window brightens as
     it blooms and dims as it dies (steady while frozen).
@@ -40,6 +42,7 @@
 #include "Components/DecayStairs.h"
 #include "Components/FloorSelector.h"
 #include "Components/FloorIndicator.h"
+#include "Components/Footsteps.h"
 
 class StairwellAudioProcessorEditor : public juce::AudioProcessorEditor,
                                       private juce::Timer
@@ -70,6 +73,7 @@ private:
     FloorIndicator floorIndicator;
     FloorSelector floors;
     fxme::AccentToggle freezeButton;
+    Footsteps footsteps;
     DecayStairs stairs;
 
     // Space

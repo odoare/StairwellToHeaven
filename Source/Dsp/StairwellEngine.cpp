@@ -67,6 +67,27 @@ fxme::TankReverb::Settings StairwellEngine::tankSettingsFor (const Parameters& p
     return s;
 }
 
+float StairwellEngine::erTimeScaleFor (Mode m, float size01) noexcept
+{
+    const auto v = modeVoicing (m);
+    return v.erTimeLow + (v.erTimeHigh - v.erTimeLow) * std::clamp (size01, 0.0f, 1.0f);
+}
+
+float StairwellEngine::erLevelFor (const Parameters& p) noexcept
+{
+    return std::cos (std::clamp (p.erLate01, 0.0f, 1.0f) * kHalfPi);
+}
+
+StairwellEngine::Reflections StairwellEngine::earlyReflectionsFor (const Parameters& p) noexcept
+{
+    const auto taps = fxme::EarlyReflections::getTaps (modeVoicing (p.mode).erPattern);
+    const float scale = std::clamp (erTimeScaleFor (p.mode, p.size01), 0.25f, fxme::EarlyReflections::maxTimeScale);
+    Reflections r {};
+    for (size_t i = 0; i < r.size(); ++i)
+        r[i] = { taps[i].ms * scale, taps[i].gain, taps[i].pan, taps[i].lowpassHz };
+    return r;
+}
+
 double StairwellEngine::tailSeconds (const Parameters& p) noexcept
 {
     return (double) p.predelaySeconds + 0.1 + (double) p.decay * std::max (1.0, (double) p.bass)
@@ -128,14 +149,13 @@ void StairwellEngine::setParameters (const Parameters& p) noexcept
     forTank.mode = activeMode;
     tank.setSettings (tankSettingsFor (forTank));
 
-    const auto v = modeVoicing (activeMode);
-    er.setTimeScale (v.erTimeLow + (v.erTimeHigh - v.erTimeLow) * std::clamp (p.size01, 0.0f, 1.0f));
+    er.setTimeScale (erTimeScaleFor (activeMode, p.size01));
 
     predelaySamples.target = (float) (std::clamp (p.predelaySeconds, 0.0f, maxPredelaySeconds) * fs);
     mix.target = std::clamp (p.mix01, 0.0f, 1.0f);
     outGain.target = dbToGain (p.outDb);
     const float b = std::clamp (p.erLate01, 0.0f, 1.0f);
-    erGain.target = std::cos (b * kHalfPi);
+    erGain.target = erLevelFor (p);
     lateGain.target = std::sin (b * kHalfPi);
     width.target = std::clamp (p.width01, 0.0f, 1.5f);
 
@@ -147,7 +167,7 @@ void StairwellEngine::setParameters (const Parameters& p) noexcept
 
 void StairwellEngine::process (float* left, float* right, int numSamples) noexcept
 {
-    float energy = 0.0f;
+    float energy = 0.0f, inputPeak = 0.0f;
     for (int i = 0; i < numSamples; ++i)
     {
         // Mode change: fade the wet out, switch, fade back in.
@@ -171,6 +191,7 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
 
         const float dryL = fxme::sanitiseSample (left[i], fxme::kMainPathLimit);
         const float dryR = fxme::sanitiseSample (right[i], fxme::kMainPathLimit);
+        inputPeak = std::max (inputPeak, std::max (std::abs (dryL), std::abs (dryR)));
 
         // Pre-delay (glides when changed).
         const float d = predelaySamples.next();
@@ -206,6 +227,8 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
     }
 
     tailEnergyDb.store (energy > 1.0e-10f ? 10.0f * std::log10 (energy) : -100.0f, std::memory_order_relaxed);
+    for (float held = inputPeakHold.load (std::memory_order_relaxed);
+         inputPeak > held && ! inputPeakHold.compare_exchange_weak (held, inputPeak, std::memory_order_relaxed);) {}
     activeFloor.store ((int) activeMode, std::memory_order_relaxed);
     modeFadeLevel.store (switchingMode ? modeFade : std::min (1.0f, modeFade), std::memory_order_relaxed);
 }

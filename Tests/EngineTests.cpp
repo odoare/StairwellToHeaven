@@ -12,6 +12,9 @@
       6. A mode change mid-tail: finite, the wet fades through (near) zero,
          and no jump bigger than the tail itself had.
       7. Freeze holds the tail.
+      8. The reflections a GUI draws (earlyReflectionsFor) are the ones that
+         sound: with the tail off, the first one arrives at the pre-delay
+         plus its time, in every mode with reflections.
 
     Exit code 0 when everything passes.
 
@@ -204,6 +207,32 @@ int main()
         const double first = energy (out.l, 24000, 48000), last = energy (out.l, 4 * 48000 + 24000, 5 * 48000);
         std::printf ("     energy change over 4 s frozen: %+.2f dB\n", 10.0 * std::log10 (last / first));
         check (std::abs (10.0 * std::log10 (last / first)) < 3.0, "holds within 3 dB (a 1 s decay unfrozen would lose 240 dB)");
+    }
+
+    std::printf ("8. Reflections drawn = reflections heard\n");
+    {
+        bool ok = true;
+        for (Mode m : { Mode::room, Mode::stairwell, Mode::hall, Mode::heaven })
+        {
+            sth::Parameters p;
+            p.mode = m;
+            p.size01 = 0.7f;
+            p.predelaySeconds = 0.015f;
+            p.erLate01 = 0.0f;   // reflections only
+            p.mix01 = 1.0f;
+            sth::StairwellEngine e;
+            e.setParameters (p);
+            e.prepare (fs);
+            const auto out = render (e, 24000, true);
+            size_t first = 0;
+            while (first < out.l.size() && std::abs (out.l[first]) + std::abs (out.r[first]) < 1.0e-4f)
+                ++first;
+            const double heard = 1000.0 * (double) first / fs;
+            const double drawn = 15.0 + sth::StairwellEngine::earlyReflectionsFor (p)[0].ms;
+            std::printf ("     mode %d: drawn %.2f ms, heard %.2f ms\n", (int) m, drawn, heard);
+            ok = ok && std::abs (heard - drawn) < 0.3;
+        }
+        check (ok, "within 0.3 ms");
     }
 
     std::printf (failures == 0 ? "All engine tests passed\n" : "%d engine test(s) FAILED\n", failures);

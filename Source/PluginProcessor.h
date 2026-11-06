@@ -61,6 +61,14 @@ public:
     /** The tail's energy in dB, for the display's glow. */
     float getTailEnergyDb() noexcept     { return engine.getTailEnergyDb().load (std::memory_order_relaxed); }
 
+    /** The input's peak in dB since the last call (which resets it), for
+        the footsteps' onsets. Message thread, one caller. */
+    float takeInputPeakDb() noexcept
+    {
+        const float p = engine.takeInputPeak();
+        return p > 1.0e-5f ? 20.0f * std::log10 (p) : -100.0f;
+    }
+
     /** The floor sounding now (0 Room .. 4 Heaven) and the mode-change
         fade (1 settled), for the floor indicator. */
     int getActiveFloor() noexcept        { return engine.getActiveFloor().load (std::memory_order_relaxed); }

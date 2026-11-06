@@ -101,6 +101,19 @@ public:
         GUI drawing the decay against frequency with TankReverb::rt60At). */
     static fxme::TankReverb::Settings tankSettingsFor (const Parameters& p) noexcept;
 
+    /** One early reflection as it sounds with these parameters: its time
+        (ms after the pre-delay, the mode's pattern scaled by Size), its
+        level, pan (-1 .. 1) and low-pass. For a GUI drawing them. */
+    struct Reflection { float ms, gain, pan, lowpassHz; };
+    using Reflections = std::array<Reflection, fxme::EarlyReflections::numTaps>;
+    static Reflections earlyReflectionsFor (const Parameters& p) noexcept;
+
+    /** The time scale Size gives the mode's reflection pattern. */
+    static float erTimeScaleFor (Mode m, float size01) noexcept;
+
+    /** The early reflections' share of the wet (Early/Late, equal power). */
+    static float erLevelFor (const Parameters& p) noexcept;
+
     /** How long the tail can last, for the host. */
     static double tailSeconds (const Parameters& p) noexcept;
 
@@ -112,6 +125,11 @@ public:
     /** The tank's energy in dB (about -100 .. 0), as of the last block: for
         the GUI's tail glow and FxmeNet. */
     std::atomic<float>& getTailEnergyDb() noexcept { return tailEnergyDb; }
+
+    /** The input's peak (linear) since the last call, which resets it: the
+        GUI polls it on a timer slower than the blocks, so the peak is held
+        until taken and no hit is missed. The footsteps walk on its onsets. */
+    float takeInputPeak() noexcept { return inputPeakHold.exchange (0.0f, std::memory_order_relaxed); }
 
     /** The floor actually sounding (it lags the parameter during a mode
         change), and the wet's level through that change (1 when settled,
@@ -147,6 +165,7 @@ private:
     bool  switchingMode = false;
 
     std::atomic<float> tailEnergyDb { -100.0f };
+    std::atomic<float> inputPeakHold { 0.0f };
     std::atomic<int>   activeFloor { (int) Mode::hall };
     std::atomic<float> modeFadeLevel { 1.0f };
 };

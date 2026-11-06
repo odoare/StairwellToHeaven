@@ -55,6 +55,7 @@ StairwellToHeaven/
     Components/DecayStairs.*    the decay display
     Components/FloorSelector.*  the mode selector (lift panel)
     Components/FloorIndicator.* the lift's floor display above it
+    Components/Footsteps.*      the early reflections as footsteps
     Assets/                 logo, icon, splash, factory presets (*.xml)
   Tests/EngineTests.cpp     headless engine tests (FxmeCore only)
   tools/make_presets.py     writes the factory presets
@@ -233,6 +234,26 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   engine's floor (`StairwellEngine::getActiveFloor`, with the fade level),
   not the parameter's, so it tells the truth during the switch.
 - **Freeze** under the floors: a latching button in pale ice blue.
+- **The layout**: the two displays (footsteps, then the decay stairs) across
+  the whole width under the top bar; under them, the floors on the left, the
+  knob rows in the centre, the faders on the right.
+- **The footsteps** (top, left of the stairs, `Footsteps`): the early
+  reflections climbing the first flight. Time runs to the right, from the
+  dry sound to a round number of milliseconds past the last reflection; the
+  path climbs a faint staircase as it goes. One footprint per reflection:
+  its size the level, left or right foot by its pan, darker the more it is
+  low-passed; the whole walk fades as Early/Late moves toward the tail. The
+  pre-delay is a dashed stretch before the first step. On every onset of the
+  input (its peak 4 dB over its own recent average, and above -50 dB), the
+  footprints light up in turn over half a second (slowed down: the real ones
+  take tens of milliseconds); a new onset restarts the walk once the sweep is
+  mostly done. The engine holds the input's peak until the GUI takes it
+  (`takeInputPeak`), so no hit between two timer ticks is missed. The
+  Stairwell's flutter reads as an even stride, the Room's as short and
+  irregular, the Hall's as long and sparse, the Plate's as two faint steps.
+  The taps come from `StairwellEngine::earlyReflectionsFor`, the ones the
+  engine plays; an engine test checks that the first one drawn is heard
+  within 0.3 ms of where it is drawn.
 - **The decay stairs** (top centre, `DecayStairs`): RT60 against frequency as
   a staircase, one step per third of an octave, stone at the bottom turning
   gold as it rises; each tread lit. Damping lowers the right of the flight,
@@ -265,7 +286,7 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
   showing the floor ("1" to "4", an infinity sign for Heaven), with an up or
   down arrow lit while a mode change fades. Cheap, and it makes the mode
   change (which clears the tail) visible.
-- **B. Footsteps on the stairs.** The early reflections drawn as marks on the
+- **B. Footsteps on the stairs.** (Built, see above.) The early reflections drawn as marks on the
   first steps (time to the right, level as size): the Stairwell floor's
   flutter reads as regular footsteps, the Hall's as sparse ones. Needs the
   ER pattern and time scale exposed to the display (the core already has
@@ -285,7 +306,7 @@ symbols), which would be a copyright and trademark risk as well as a cliché.
 - **G. Real artwork** for the splash and the icon (todo 8): the
   placeholders are a gold staircase climbing into light, drawn by a script.
 
-A and C were chosen and built (2026-11-06). Next candidates: B, then D.
+A, B and C were chosen and built (2026-11-06). Next candidate: D.
 
 ## Presets
 
@@ -301,7 +322,8 @@ Room. No module presets (the plugin has no embeddable part).
 - Audio thread: `processBlock` reads the parameters (raw atomics) into one
   `sth::Parameters`, resolves a synced pre-delay against the host tempo,
   and runs the engine. No allocation, no locks.
-- Message thread: the editor's components poll on timers; the decay stairs
+- Message thread: the editor's components poll on timers (the footsteps
+  take the input's held peak, an atomic exchange); the decay stairs
   call `currentParameters()` (atomics) and `TankReverb::rt60At()`, and read
   the engine's tail energy (an atomic); the floor indicator reads the
   engine's active floor and mode fade (atomics); the editor reads the tail
@@ -318,7 +340,8 @@ Room. No module presets (the plugin has no embeddable part).
   input; freeze holds (-0.3 dB over 4 s) and releases; shimmer bounded at
   full amount on 20 s; bit-exact reset; ER timing and the stairwell's
   regularity.
-- `Tests/EngineTests.cpp` (11 checks): Mix 0 is the dry signal exactly;
+- `Tests/EngineTests.cpp` (12 checks; the last: the reflections drawn are the
+  ones heard): Mix 0 is the dry signal exactly;
   silence; every mode finite, audible, decaying; nothing before the
   pre-delay; Size within each mode's range; shimmer only in Heaven; a mode
   change mid-tail without a click (largest step smaller than the tail's

@@ -59,6 +59,13 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
                       juce::StringArray ("1", "2", "3", "4", juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x9e")))),
       floors (*p.getAPVTS().getParameter (ids::mode), choices::modes,
               juce::StringArray ("1", "2", "3", "4", juce::String (juce::CharPointer_UTF8 ("\xe2\x88\x9e")))),
+      footsteps ([this]
+                 {
+                     Footsteps::Snapshot s;
+                     s.params = processor.currentParameters();
+                     s.inputPeakDb = processor.takeInputPeakDb();
+                     return s;
+                 }),
       stairs ([this]
               {
                   DecayStairs::Snapshot s;
@@ -118,6 +125,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     freezeAtt = attachButton (p.getAPVTS(), ids::freeze, freezeButton);
     addAndMakeVisible (freezeButton);
 
+    footsteps.setTooltip (tips::global::footsteps);
+    addAndMakeVisible (footsteps);
     stairs.setTooltip (tips::global::stairs);
     addAndMakeVisible (stairs);
 
@@ -281,12 +290,26 @@ void StairwellAudioProcessorEditor::resized()
     splash.setBounds (getLocalBounds());
     area.reduce (theme::margin, theme::margin);
 
-    // Left: the floor indicator, the floors, Freeze under them.
+    // The knob rows are sized first; the displays get the rest.
+    const int rowHeight = juce::jlimit (84, 130, (area.getHeight() - 200 - theme::margin) / 3);
+
+    // Top, across the whole width: the footsteps (the early part) on the
+    // left, the decay stairs (the tail) on the right; the climb reads left
+    // to right.
+    {
+        auto display = area.removeFromTop (area.getHeight() - 3 * rowHeight - theme::margin);
+        footsteps.setBounds (display.removeFromLeft (juce::jmax (220, display.getWidth() / 3)));
+        display.removeFromLeft (theme::margin);
+        stairs.setBounds (display);
+    }
+    area.removeFromTop (theme::margin);
+
+    // Under them, left: the floor indicator, the floors, Freeze.
     auto left = area.removeFromLeft (150);
-    floorIndicator.setBounds (left.removeFromTop (58).reduced (14, 0));
-    left.removeFromTop (8);
-    freezeButton.setBounds (left.removeFromBottom (40).reduced (4, 2));
-    left.removeFromBottom (8);
+    floorIndicator.setBounds (left.removeFromTop (50).reduced (14, 0));
+    left.removeFromTop (6);
+    freezeButton.setBounds (left.removeFromBottom (36).reduced (4, 2));
+    left.removeFromBottom (6);
     floors.setBounds (left);
     area.removeFromLeft (theme::margin);
 
@@ -296,11 +319,7 @@ void StairwellAudioProcessorEditor::resized()
     outputFader.setBounds (right.removeFromLeft (62));
     area.removeFromRight (theme::margin);
 
-    // Centre: the stairs, then three rows of knobs.
-    const int rowHeight = juce::jmax (84, (area.getHeight() - 170) / 3);
-    stairs.setBounds (area.removeFromTop (area.getHeight() - 3 * rowHeight - theme::margin));
-    area.removeFromTop (theme::margin);
-
+    // Centre: three rows of knobs.
     spaceRow = area.removeFromTop (rowHeight);
     toneRow = area.removeFromTop (rowHeight);
     motionRow = area;

@@ -2,6 +2,24 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## 7 (part). Themed GUI: footsteps (2026-11-06)
+
+Revised the same day: the walk now starts on every input onset (the
+input's peak, held by the engine until the GUI takes it, 4 dB over its
+recent average) rather than on jumps of the tail's energy, which were rare
+on continuous material; and the two displays span the whole width, the
+floors, knobs and faders under them.
+
+Proposal B of `architecture.md`: `Components/Footsteps`, left of the decay
+stairs, draws the early reflections as footprints climbing a flight (time
+to the right, size the level, foot by pan, darker when duller, the
+pre-delay as the gap before the first step), lit in turn when a sound
+starts. The engine gained `earlyReflectionsFor`, `erTimeScaleFor` and
+`erLevelFor` (also used by its own processing, so the drawing and the sound
+share one computation), and a test that the first reflection drawn is heard
+within 0.3 ms of its place (it is within 0.1 ms in every mode). Engine tests
+pass; not built as a plugin yet.
+
 ## 7 (part). Themed GUI: floor indicator, a window lit by the tail (2026-11-06)
 
 Proposals A and C of `architecture.md`:
