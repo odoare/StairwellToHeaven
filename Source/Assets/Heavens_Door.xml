@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Parameters presetName="Heavens Door">
+  <PARAM id="mode" value="4"/>
+  <PARAM id="decay" value="6"/>
+  <PARAM id="size" value="80"/>
+  <PARAM id="predelay" value="40"/>
+  <PARAM id="predelaySync" value="0"/>
+  <PARAM id="predelayDiv" value="5"/>
+  <PARAM id="diffusion" value="80"/>
+  <PARAM id="damping" value="30"/>
+  <PARAM id="dampFreq" value="6000"/>
+  <PARAM id="bass" value="1.2"/>
+  <PARAM id="crossover" value="300"/>
+  <PARAM id="modRate" value="0.7"/>
+  <PARAM id="modDepth" value="30"/>
+  <PARAM id="erLate" value="60"/>
+  <PARAM id="width" value="100"/>
+  <PARAM id="lowCut" value="200"/>
+  <PARAM id="highCut" value="20000"/>
+  <PARAM id="shimmer" value="55"/>
+  <PARAM id="shimmerPitch" value="0"/>
+  <PARAM id="freeze" value="0"/>
+  <PARAM id="mix" value="40"/>
+  <PARAM id="output" value="0"/>
+</Parameters>
