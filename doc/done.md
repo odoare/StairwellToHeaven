@@ -2,6 +2,16 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## 10. FxmeNet (2026-11-07)
+
+The processor holds a `fxme::net::NetBridge` and registers the editor's
+non-parameter reads: `tail` and `fade` (the engine's atomics), `floor` (a
+scalar; `getActiveFloor` answers from telemetry on a mirror) and `input` (a
+peak; `takeInputPeakDb` takes it from telemetry on a mirror). On a mirror
+`processBlock` returns at once; `getTailLengthSeconds` now computes from the
+parameters (right on a mirror, which never processes). The editor is
+unchanged. Not built yet; to check with FxmeNet's `FxmeNetLoopback`.
+
 ## Knob rows rebalanced, a HEAVEN group (2026-11-06)
 
 Motion had seven knobs and a column of two menus. Now every row has six

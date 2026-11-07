@@ -45,6 +45,14 @@ StairwellAudioProcessor::StairwellAudioProcessor()
             p (damping), p (dampFreq), p (bass), p (crossover), p (modRate), p (modDepth), p (erLate), p (width),
             p (lowCut), p (highCut), p (shimmer), p (shimmerPitch), p (shimmer2), p (shimmerPitch2), p (pitchedInput),
             p (freeze), p (mix), p (output) };
+
+    // FxmeNet: everything the editor reads that is not a parameter. On a
+    // mirror (the DAW side, which never processes) these are written by the
+    // server's telemetry; the editor reads them as usual.
+    net.telemetry().addValue ("tail", engine.getTailEnergyDb());   // the stairs' and the window's light
+    net.telemetry().addValue ("fade", engine.getModeFade());       // the floor indicator
+    net.telemetry().addScalar ("floor", [this] { return (float) engine.getActiveFloor().load (std::memory_order_relaxed); });
+    net.telemetry().addPeak ("input", [this] { return engine.takeInputPeak(); });   // the reflections' sweep
 }
 
 StairwellAudioProcessor::~StairwellAudioProcessor() = default;
@@ -164,7 +172,10 @@ void StairwellAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 {
     juce::ScopedNoDenormals noDenormals;
     const int numSamples = buffer.getNumSamples();
-    if (buffer.getNumChannels() < 2)
+    // FxmeNet: a mirror never processes (its audio runs on the server); if a
+    // host calls it anyway, leave the engine alone, so the telemetry it
+    // shows is not overwritten.
+    if (buffer.getNumChannels() < 2 || net.isMirror())
         return;
     if (getTotalNumInputChannels() == 1)
         buffer.copyFrom (1, 0, buffer, 0, 0, numSamples);
@@ -174,9 +185,7 @@ void StairwellAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
             if (auto bpm = pos->getBpm())
                 hostBpm.store (*bpm);
 
-    const auto params = currentParameters();
-    tailSeconds.store (sth::StairwellEngine::tailSeconds (params));
-    engine.setParameters (params);
+    engine.setParameters (currentParameters());
     engine.process (buffer.getWritePointer (0), buffer.getWritePointer (1), numSamples);
 }
 

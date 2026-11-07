@@ -348,6 +348,32 @@ octave and a fifth), Undertow (an octave and a fourth down), Only Heaven
 (Pitched input at 100 %, Mix at 100 %: the shimmer alone), Synced
 Slapback Room. No module presets (the plugin has no embeddable part).
 
+## FxmeNet
+
+The plugin is FxmeNet-aware (`FxmeTools/doc/fxmenet-howto.md`): its DSP can
+run on an FxmeNet server while its editor runs in the DAW (a mirror that
+never processes). The processor holds a `fxme::net::NetBridge` (declared
+last, returned by `getVST3ClientExtensions()`) and registers what the
+editor reads that is not a parameter:
+
+| Name | Kind | What | Read by |
+|---|---|---|---|
+| `tail` | value (`atomic<float>`) | the tank's energy, dB | the decay stairs' light, the window's light |
+| `fade` | value (`atomic<float>`) | the mode-change fade | the floor indicator |
+| `floor` | scalar | the floor sounding | the floor indicator (`getActiveFloor` answers from telemetry on a mirror) |
+| `input` | peak (read and reset) | the input's peak since last asked | the reflections view's sweep (`takeInputPeakDb` takes it from telemetry on a mirror) |
+
+Everything else the editor shows comes from the parameters (synced by
+FxmeNet), including the decay stairs' curve and the reflections' places.
+On a mirror `processBlock` returns at once (so a stray call cannot
+overwrite the telemetry), and `getTailLengthSeconds` computes from the
+parameters rather than from the audio thread. There is no non-parameter
+state, so `notifyStateChanged()` is never needed. The names are stable:
+renaming one breaks that channel between versions. Without FxmeNet nothing
+changes. Check: FxmeNet's `FxmeNetLoopback path/to/StairwellToHeaven.vst3`
+(source and mirror side by side; the mirror's floor, light and sweep must
+follow the source's).
+
 ## Threading and state
 
 - Audio thread: `processBlock` reads the parameters (raw atomics) into one

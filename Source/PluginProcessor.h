@@ -19,6 +19,7 @@
 
 #include <JuceHeader.h>
 #include "Dsp/StairwellEngine.h"
+#include <FxmeTools/net/NetBridge.h>   // FxmeNet
 #include <atomic>
 #include <utility>
 
@@ -40,7 +41,9 @@ public:
     bool acceptsMidi() const override                   { return false; }
     bool producesMidi() const override                  { return false; }
     bool isMidiEffect() const override                  { return false; }
-    double getTailLengthSeconds() const override        { return tailSeconds.load(); }
+    /** From the parameters, not from the audio thread: right on an FxmeNet
+        mirror too, which never processes. */
+    double getTailLengthSeconds() const override        { return sth::StairwellEngine::tailSeconds (currentParameters()); }
 
     int getNumPrograms() override                       { return 1; }
     int getCurrentProgram() override                    { return 0; }
@@ -52,6 +55,9 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState& getAPVTS() noexcept  { return apvts; }
+
+    // FxmeNet: the server and the client find the bridge through the VST3 component.
+    juce::VST3ClientExtensions* getVST3ClientExtensions() override { return &net; }
     fxme::PresetManager& getPresetManager() noexcept         { return presetManager; }
 
     /** The parameters as the engine sees them now (message thread too: the
@@ -65,13 +71,19 @@ public:
         the reflections view's onsets. Message thread, one caller. */
     float takeInputPeakDb() noexcept
     {
-        const float p = engine.takeInputPeak();
+        // On an FxmeNet mirror the peak comes from the server.
+        const float p = net.isMirror() ? net.telemetry().takePeak ("input") : engine.takeInputPeak();
         return p > 1.0e-5f ? 20.0f * std::log10 (p) : -100.0f;
     }
 
     /** The floor sounding now (0 Room .. 4 Heaven) and the mode-change
         fade (1 settled), for the floor indicator. */
-    int getActiveFloor() noexcept        { return engine.getActiveFloor().load (std::memory_order_relaxed); }
+    int getActiveFloor() noexcept
+    {
+        if (net.isMirror())   // FxmeNet: the server's floor
+            return juce::roundToInt (net.telemetry().scalar ("floor"));
+        return engine.getActiveFloor().load (std::memory_order_relaxed);
+    }
     float getModeFade() noexcept         { return engine.getModeFade().load (std::memory_order_relaxed); }
 
     /** True the first time it is asked in this plugin instance: the splash is
@@ -94,8 +106,9 @@ private:
     } raw {};
 
     std::atomic<double> hostBpm { 120.0 };
-    std::atomic<double> tailSeconds { 3.0 };
     bool splashShown = false;
+
+    fxme::net::NetBridge net;   // FxmeNet: declared after what it registers
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StairwellAudioProcessor)
 };

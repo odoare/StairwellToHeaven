@@ -32,8 +32,7 @@ high (blocks a release), medium, low.
    placeholders drawn by a script), then a screenshot for the README.
 9. **First release** (medium). After 1, 2 and 8: README checked, tag
    `v0.1.0`, `release.yml` on the three OSes.
-10. **FxmeNet** (low). A `fxme::net::NetBridge` like FxmeFX's processors
-    (telemetry: the tail energy), if the plugin is to be remote-controlled.
+10. Done (2026-11-07): FxmeNet, see `done.md`.
 11. **Stereo into the tank** (low). The tank takes (L+R)/2, as Dattorro's;
     feeding L and R into the two branches would keep more of the source's
     image in the tail. Changes the sound: a voicing option, not a default.
