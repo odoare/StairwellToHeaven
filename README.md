@@ -15,7 +15,7 @@ Dattorro's), whose decay is set in seconds and shaped across frequency.
   shorter under its crossover. The decay stairs show the result, one step
   per third of an octave.
 - Size, Diffusion, modulation (rate, depth), Early/Late balance, Width, low
-  and high cut on the reverb only, Mix and Output.
+  and high cut on the reverb only, Mix and Gain, input and output meters.
 - Pre-delay in milliseconds or as a note value at the host tempo.
 - Freeze: holds the tail for ever, play over it.
 - Twelve factory presets, your own in the preset bar.

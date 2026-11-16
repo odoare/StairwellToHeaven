@@ -9,8 +9,9 @@
       3. Every mode: an impulse gives a finite tail that decays.
       4. Pre-delay: nothing comes out before it.
       5. Size maps onto each mode's range; Heaven alone has the shimmer.
-      6. A mode change mid-tail: finite, the wet fades through (near) zero,
-         and no jump bigger than the tail itself had.
+      6. A mode change mid-tail: no jump bigger than the tail itself had,
+         the tail kept (crossfaded, not cleared) and gone after the fade;
+         a second change straight after waits for it, also without a click.
       7. Freeze holds the tail.
       8. The reflections a GUI draws (earlyReflectionsFor) are the ones that
          sound: with the tail off, the first one arrives at the pre-delay
@@ -169,32 +170,66 @@ int main()
         e.prepare (fs);
         render (e, 24000, true);   // a tail going
 
-        // Steady input during the switch, to see the wet fade through zero.
-        std::vector<float> l (9600), r (9600);
-        float maxStepBefore = 0.0f, maxStepDuring = 0.0f, minLevel = 1.0e9f;
-        auto feed = [&] (int count, float& maxStep, bool trackMin)
+        // Silence in from here: what comes out is the tail.
+        float last = 0.0f;
+        auto feed = [&] (int count, float& maxStep, double& sumSquares)
         {
+            std::vector<float> l (256), r (256);
             for (int start = 0; start < count; start += 256)
             {
                 const int n = std::min (256, count - start);
-                for (int i = 0; i < n; ++i) { l[(size_t) i] = 0.0f; r[(size_t) i] = 0.0f; }
-                static float last = 0.0f;
+                std::fill (l.begin(), l.end(), 0.0f);
+                std::fill (r.begin(), r.end(), 0.0f);
                 e.process (l.data(), r.data(), n);
                 for (int i = 0; i < n; ++i)
                 {
                     maxStep = std::max (maxStep, std::abs (l[(size_t) i] - last));
                     last = l[(size_t) i];
-                    if (trackMin) minLevel = std::min (minLevel, std::abs (l[(size_t) i]) + std::abs (r[(size_t) i]));
+                    sumSquares += (double) l[(size_t) i] * l[(size_t) i];
                 }
             }
         };
-        feed (4800, maxStepBefore, false);
+        float stepBefore = 0.0f, stepDuring = 0.0f, stepAfter = 0.0f;
+        double before = 0.0, during = 0.0, after = 0.0;
+        feed (2400, stepBefore, before);       // 50 ms before the change
         p.mode = Mode::room;
         e.setParameters (p);
-        feed (2880, maxStepDuring, true);   // 60 ms: through the fade
-        std::printf ("     largest step before %.4f, during %.4f, lowest level %.2g\n", maxStepBefore, maxStepDuring, minLevel);
-        check (std::isfinite (maxStepDuring) && maxStepDuring <= maxStepBefore * 1.5f + 1.0e-6f, "no click");
-        check (minLevel < 1.0e-3f, "the wet goes through silence");
+        feed (2400, stepDuring, during);       // 50 ms after it
+        feed (72000, stepAfter, after);        // the next 1.5 s
+        const double keptDb = 10.0 * std::log10 (during / before);
+        std::printf ("     largest step before %.4f, during %.4f; tail 50 ms after vs before %+.2f dB\n",
+                     stepBefore, stepDuring, keptDb);
+        check (std::isfinite (stepDuring) && stepDuring <= stepBefore * 1.5f + 1.0e-6f, "no click");
+        check (keptDb > -6.0, "the tail is kept through the change");
+        check (e.getActiveFloor().load() == (int) Mode::room && e.getModeFade().load() > 0.999f,
+               "the new floor sounds, the crossfade over");
+        float tailPeak = 0.0f;
+        {
+            std::vector<float> l (4800, 0.0f), r (4800, 0.0f);
+            e.process (l.data(), r.data(), 4800);
+            for (float v : l) tailPeak = std::max (tailPeak, std::abs (v));
+        }
+        std::printf ("     1.6 s after the change: peak %.2g\n", tailPeak);
+        check (tailPeak < 1.0e-3f, "the old tail has faded out");
+
+        // Two changes in a row: the second waits for the first's tail (sped
+        // up), without a click, and ends on the last floor.
+        render (e, 24000, true);
+        last = 0.0f;
+        float stepQuick = 0.0f;
+        double ignored = 0.0;
+        float stepRef = 0.0f;
+        feed (2400, stepRef, ignored);
+        p.mode = Mode::plate;
+        e.setParameters (p);
+        feed (512, stepQuick, ignored);
+        p.mode = Mode::heaven;
+        e.setParameters (p);
+        feed (9600, stepQuick, ignored);
+        std::printf ("     two changes: largest step %.4f (before %.4f), floor %d\n",
+                     stepQuick, stepRef, e.getActiveFloor().load());
+        check (std::isfinite (stepQuick) && stepQuick <= stepRef * 1.5f + 1.0e-6f, "no click on a quick second change");
+        check (e.getActiveFloor().load() == (int) Mode::heaven, "the last change wins");
     }
 
     std::printf ("7. Freeze\n");

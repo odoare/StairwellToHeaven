@@ -32,7 +32,7 @@ reverb"). Its phases, and where each stands:
 | 1 | The late tank in FxmeTools core | Done: `fxme::TankReverb`, tested |
 | 2 | Calibrated decay: RT60, high damping, bass multiplier | Done in the tank; verified by T30 on impulse responses and `rt60At()`. A per-octave measurement report is todo 3 |
 | 3 | Early reflections | Done: `fxme::EarlyReflections`, four patterns, ER into the tank per mode, Early/Late balance. Patterns from `RoomAcoustics` (image source) are todo 6 |
-| 4 | Modes | Done: Room, Stairwell, Plate, Hall, Heaven (shimmer). A mode change fades out, clears and fades in (a true crossfade is todo 5) |
+| 4 | Modes | Done: Room, Stairwell, Plate, Hall, Heaven (shimmer). A mode change crossfades two spaces: the old tail fades out over 1 s while the new mode takes the input |
 | 5 | Freeze | Done, in the tank (ramped, safety limiter) |
 | 6 | Pre-delay sync | Done (`fxme::DelayTimeResolver`, 15 note values) |
 | 7 | GUI, presets, docs | GUI and presets done (to be seen built); docs here. CPU, release: todo 2 and 9 |
@@ -107,8 +107,10 @@ in L,R ─┬──────────────────────�
                                                                       │    │
         wet = ER x cos(b) + late x sin(b)  (b: Early/Late)            │    │
             -> Width (M/S) -> Low cut, High cut (12 dB/oct)           │    │
-            -> x mode fade                                            │    │
-out = (dry + Mix (wet - dry)) x Output  ◄─────────────────────────────┴────┘
+out = (dry + Mix (wet - dry)) x Gain  ◄───────────────────────────────┴────┘
+
+After a mode change the old space (its own tank and ER, no more input) is
+added into ER and late, times its tail fade, until the fade ends.
 ```
 
 ### The tank (`fxme::TankReverb`)
@@ -189,8 +191,16 @@ The Stairwell floor is the plugin's namesake: two hard parallel walls give
 a regular flutter (a reflection every 8.5 ms at Size 1, alternating sides,
 barely darkened), and less decay diffusion keeps the onset ringing.
 
-Changing floors fades the wet out over 30 ms, clears the tank and the ER
-(their lengths jump), applies the voicing and fades back in.
+Changing floors crossfades two spaces (a tank and its ER each,
+`StairwellEngine::Space`). The new mode starts in the idle space, cleared
+(its lengths jump), and takes the input from then on; the old space stops
+taking input and its tail rings on, fading out over 1 s (squared, so it
+ends smoothly), or sooner once its loop is under -100 dB over a block. The
+tail is kept and nothing clicks; the tank's CPU doubles during the fade
+only. A further change while a tail is still fading speeds that fade up
+(30 ms) and waits for it, so a tail is never cut. `EngineTests` 6 checks
+both (no step bigger than the tail's own, the tail kept within 6 dB, gone
+after 1.6 s; a second change 10 ms later).
 
 ### Early reflections (`fxme::EarlyReflections`)
 
@@ -235,21 +245,28 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
 
 ### As built
 
-- **The shell** (house standard): `fxme::TopBar` with the name, version and
+- **The shell** (house standard): `fxme::TopBar` with the title (the
+  lettered `title.png`, `TopBar::setTitleImage`), version and
   the FX-Mechanics link, the preset bar with its browser ("..."), the "?"
   (hover help on or off, machine-wide in `AppSettings.h`) and the info
   button (help text); the icon in the bar and the logo open the splash; the
   splash shows for 3 s the first time an instance opens its window.
   Tooltips all in `Tooltips.h`. One `TextEntryFocusFixer`. Look-and-feel set
-  on the editor (combos inherit it), accent pale gold.
+  on the editor (combos inherit it).
+- **The floor's colour**: the accent follows the floor
+  (`theme::accentForFloor`): pale gold in the Room, toward salmon up to the
+  Hall, blue in Heaven. On a floor change the editor glides it over about a
+  quarter of a second and restyles everything with it (`applyAccent`: the
+  look-and-feel, top bar, preset bar, knobs, faders, meters, the two
+  displays, the window's light). The HEAVEN group keeps Heaven's pale blue.
 - **The floors** (left, `FloorSelector`): the mode as a lift's button panel,
-  Room on the ground floor up to Heaven at the top (its button lit in
-  Heaven's pale blue). One click, one undoable gesture; follows automation.
+  Room on the ground floor up to Heaven at the top (each button lit in its
+  floor's colour). One click, one undoable gesture; follows automation.
 - **The floor indicator** (above the floors, `FloorIndicator`): the lift's
   display, the floor sounding now ("1" to "4", an infinity sign for Heaven)
   in amber over the dim ghost of its segments. An up or down arrow blinks
-  while a mode change travels (at least 0.6 s, though the engine's switch
-  takes 60 ms), and the display flashes once on arrival. It shows the
+  while a mode change travels (at least 0.6 s, and as long as the old
+  tail fades), and the display flashes once on arrival. It shows the
   engine's floor (`StairwellEngine::getActiveFloor`, with the fade level),
   not the parameter's, so it tells the truth during the switch.
 - **Freeze** under the floors, as a halo (`HaloButton`): a ring of light
@@ -296,7 +313,11 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   top floor, dim elsewhere). Disabled when they do nothing
   (the pre-delay knob while synced, the note while not, the shimmer outside
   Heaven).
-- **Mix and Output** as console faders on the right.
+- **Levels** on the right: the input meter, Mix and Gain (the Output
+  parameter) as console faders, the output meter, each named above.
+  The meters are `fxme::StereoLevelMeter`s (RMS bar, peak held a second)
+  fed from the engine's `fxme::VuMeter`s (300 ms window); the editor takes
+  each held max (read and reset) on its timer.
 - **The backdrop**: stone at the bottom of the window, a warm light from the
   top whose strength follows the tail's energy (-60 dB dark to 0 dB full,
   rising fast, falling slowly): the window brightens as the reverb blooms and
@@ -359,7 +380,8 @@ editor reads that is not a parameter:
 | Name | Kind | What | Read by |
 |---|---|---|---|
 | `tail` | value (`atomic<float>`) | the tank's energy, dB | the decay stairs' light, the window's light |
-| `fade` | value (`atomic<float>`) | the mode-change fade | the floor indicator |
+| `fade` | value (`atomic<float>`) | the mode-change crossfade (1 settled) | the floor indicator |
+| `inL`, `inR`, `outL`, `outR` | meter (`fxme::VuMeter`) | input and output levels | the level meters (written into the same meters on a mirror) |
 | `floor` | scalar | the floor sounding | the floor indicator (`getActiveFloor` answers from telemetry on a mirror) |
 | `input` | peak (read and reset) | the input's peak since last asked | the reflections view's sweep (`takeInputPeakDb` takes it from telemetry on a mirror) |
 

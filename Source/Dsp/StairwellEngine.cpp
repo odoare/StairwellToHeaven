@@ -21,7 +21,10 @@ namespace sth
 namespace
 {
     constexpr double kSmoothingSeconds = 0.05;
-    constexpr double kModeFadeSeconds  = 0.03;
+    constexpr double kTailFadeSeconds  = 1.0;    // the old space's tail, after a mode change
+    constexpr double kQuickFadeSeconds = 0.03;   // ... when a further change waits for it
+    constexpr float  kTailGoneEnergy   = 1.0e-10f;   // -100 dB: the old tail has died away
+    constexpr double kVuSeconds        = 0.3;
     constexpr double kButterworthK     = 1.4142135623730951;
     constexpr float  kHalfPi           = 1.5707963f;
 
@@ -112,19 +115,27 @@ double StairwellEngine::tailSeconds (const Parameters& p) noexcept
 void StairwellEngine::prepare (double sampleRate)
 {
     fs = sampleRate > 0.0 ? sampleRate : 48000.0;
-    tank.prepare (fs);
-    er.prepare (fs);
+    for (auto& s : spaces)
+    {
+        s.tank.prepare (fs);
+        s.er.prepare (fs);
+    }
     for (auto& line : predelay)
         line.prepare (fs, maxPredelaySeconds + 0.01f);
     inputShifter1.prepare (fs, 1, 40.0f);
     inputShifter2.prepare (fs, 1, 40.0f);
+    for (auto* meters : { &inMeters, &outMeters })
+        for (auto& m : *meters)
+        {
+            m.prepare (fs);
+            m.setWindowDuration (kVuSeconds);
+        }
 
     const float coef = 1.0f - (float) std::exp (-1.0 / (kSmoothingSeconds * fs));
     for (auto* s : { &predelaySamples, &mix, &outGain, &erGain, &lateGain, &width, &pitchedMix })
         s->coef = coef;
-    modeFadeStep = (float) (1.0 / (kModeFadeSeconds * fs));
 
-    applyMode (params.mode);
+    reset();
     setParameters (params);
     predelaySamples.snap (predelaySamples.target);
     mix.snap (mix.target);
@@ -133,50 +144,79 @@ void StairwellEngine::prepare (double sampleRate)
     erGain.snap (erGain.target);
     lateGain.snap (lateGain.target);
     width.snap (width.target);
-    reset();
 }
 
 void StairwellEngine::reset()
 {
-    tank.reset();
-    er.reset();
+    for (auto& s : spaces)
+    {
+        s.tank.reset();
+        s.er.reset();
+    }
     for (auto& line : predelay) line.reset();
     inputShifter1.reset();
     inputShifter2.reset();
     for (auto& f : lowCut)  f.reset();
     for (auto& f : highCut) f.reset();
-    modeFade = 1.0f;
-    switchingMode = false;
+    for (auto* meters : { &inMeters, &outMeters })
+        for (auto& m : *meters)
+            m.clear();
+
+    // Nothing is sounding: the mode applies at once, without a crossfade.
+    tailFading = false;
+    tailLevel = 0.0f;
+    voice (liveSpace(), params.mode);
+    updateSpace (liveSpace());
+    activeFloor.store ((int) params.mode, std::memory_order_relaxed);
+    modeFadeLevel.store (1.0f, std::memory_order_relaxed);
 }
 
-void StairwellEngine::applyMode (Mode m) noexcept
+void StairwellEngine::voice (Space& s, Mode m) noexcept
 {
-    activeMode = m;
-    activeFloor.store ((int) m, std::memory_order_relaxed);
+    s.mode = m;
     const auto v = modeVoicing (m);
-    er.setPattern (v.erPattern);
-    erIntoTank = v.erIntoTank;
+    s.er.setPattern (v.erPattern);
+    s.erIntoTank = v.erIntoTank;
+}
+
+void StairwellEngine::updateSpace (Space& s) noexcept
+{
+    // Each space keeps its own mode's voicing; the rest follows the parameters.
+    auto forSpace = params;
+    forSpace.mode = s.mode;
+    s.tank.setSettings (tankSettingsFor (forSpace));
+    s.er.setTimeScale (erTimeScaleFor (s.mode, params.size01));
+}
+
+void StairwellEngine::startSwitch() noexcept
+{
+    // The idle space takes the new mode, clean; the live one becomes the tail.
+    auto& next = fadingSpace();
+    next.tank.reset();
+    next.er.reset();
+    voice (next, params.mode);
+    updateSpace (next);
+    live = 1 - live;
+    tailFading = true;
+    tailLevel = 1.0f;
+    tailStep = (float) (1.0 / (kTailFadeSeconds * fs));
+    activeFloor.store ((int) params.mode, std::memory_order_relaxed);
 }
 
 void StairwellEngine::setParameters (const Parameters& p) noexcept
 {
     params = p;
-    if (p.mode != activeMode)
-        switchingMode = true;   // process() fades out, then applies it
 
-    // The tank keeps the active mode's voicing until the switch.
-    auto forTank = p;
-    forTank.mode = activeMode;
-    tank.setSettings (tankSettingsFor (forTank));
-
-    er.setTimeScale (erTimeScaleFor (activeMode, p.size01));
+    updateSpace (liveSpace());
+    if (tailFading)
+        updateSpace (fadingSpace());
 
     predelaySamples.target = (float) (std::clamp (p.predelaySeconds, 0.0f, maxPredelaySeconds) * fs);
     mix.target = std::clamp (p.mix01, 0.0f, 1.0f);
 
     // Pitched input: Heaven only; the two voices' intervals, weighted by
     // their amounts (voice 1 alone when both are at 0).
-    const bool heavenNow = modeVoicing (activeMode).shimmer;
+    const bool heavenNow = modeVoicing (liveSpace().mode).shimmer;
     pitchedMix.target = heavenNow ? std::clamp (p.pitchedInput01, 0.0f, 1.0f) : 0.0f;
     inputShifter1.setPitchSemitones (std::clamp (p.shimmerSemitones, -24.0f, 24.0f));
     inputShifter2.setPitchSemitones (std::clamp (p.shimmerSemitones2, -24.0f, 24.0f));
@@ -197,28 +237,26 @@ void StairwellEngine::setParameters (const Parameters& p) noexcept
 
 void StairwellEngine::process (float* left, float* right, int numSamples) noexcept
 {
-    float energy = 0.0f, inputPeak = 0.0f;
+    // Mode change: start the crossfade, or, while a tail is still fading,
+    // hurry it and switch once it is gone.
+    if (params.mode != liveSpace().mode)
+    {
+        if (! tailFading)
+            startSwitch();
+        else
+            tailStep = std::max (tailStep, (float) (1.0 / (kQuickFadeSeconds * fs)));
+    }
+
+    inMeters[0].process (left, numSamples);
+    inMeters[1].process (right, numSamples);
+
+    auto& now = liveSpace();
+    auto& old = fadingSpace();
+    const bool fadingThisBlock = tailFading;
+    float energy = 0.0f, inputPeak = 0.0f, oldPeakEnergy = 0.0f;
+    bool wentBad = false;
     for (int i = 0; i < numSamples; ++i)
     {
-        // Mode change: fade the wet out, switch, fade back in.
-        if (switchingMode)
-        {
-            modeFade -= modeFadeStep;
-            if (modeFade <= 0.0f)
-            {
-                modeFade = 0.0f;
-                tank.reset();
-                er.reset();
-                applyMode (params.mode);
-                setParameters (params);
-                switchingMode = false;
-            }
-        }
-        else if (modeFade < 1.0f)
-        {
-            modeFade = std::min (1.0f, modeFade + modeFadeStep);
-        }
-
         const float dryL = fxme::sanitiseSample (left[i], fxme::kMainPathLimit);
         const float dryR = fxme::sanitiseSample (right[i], fxme::kMainPathLimit);
         inputPeak = std::max (inputPeak, std::max (std::abs (dryL), std::abs (dryR)));
@@ -254,10 +292,33 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
         }
 
         float el, eR, tl, tr;
-        er.process (pl, pr, el, eR);
+        now.er.process (pl, pr, el, eR);
         const float erMono = 0.5f * (el + eR);
-        tank.process (pl + erIntoTank * erMono, pr + erIntoTank * erMono, tl, tr);
-        energy = std::max (energy, tank.getEnergy());
+        now.tank.process (pl + now.erIntoTank * erMono, pr + now.erIntoTank * erMono, tl, tr);
+        energy = std::max (energy, now.tank.getEnergy());
+
+        // The old space, after a mode change: no more input, its tail fading
+        // (squared, so it ends smoothly).
+        if (tailFading)
+        {
+            float oel, oer, otl, otr;
+            old.er.process (0.0f, 0.0f, oel, oer);
+            const float oldErIn = old.erIntoTank * 0.5f * (oel + oer);
+            old.tank.process (oldErIn, oldErIn, otl, otr);
+            const float g = tailLevel * tailLevel;
+            el += g * oel;  eR += g * oer;
+            tl += g * otl;  tr += g * otr;
+            const float oldEnergy = old.tank.getEnergy();
+            energy = std::max (energy, g * g * oldEnergy);
+            oldPeakEnergy = std::max (oldPeakEnergy, oldEnergy);
+
+            tailLevel -= tailStep;
+            if (tailLevel <= 0.0f)
+            {
+                tailLevel = 0.0f;
+                tailFading = false;
+            }
+        }
 
         const float eg = erGain.next(), lg = lateGain.next();
         float wl = eg * el + lg * tl;
@@ -271,19 +332,39 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
         if (lowCutOn)  { wl = lowCut[0].highPass (wl);  wr = lowCut[1].highPass (wr); }
         if (highCutOn) { wl = highCut[0].lowPass (wl);  wr = highCut[1].lowPass (wr); }
 
-        wl *= modeFade;
-        wr *= modeFade;
+        // Last line of defence: a wet that went bad (NaN, or past +60 dBFS)
+        // is muted, and the whole reverb cleared after the block, so a bad
+        // state cannot stay in a filter and keep the plugin silent.
+        if (fxme::isOutOfBounds (wl, fxme::kMainPathLimit) || fxme::isOutOfBounds (wr, fxme::kMainPathLimit))
+        {
+            wentBad = true;
+            wl = wr = 0.0f;
+        }
 
         const float mx = mix.next(), g = outGain.next();
         left[i]  = (dryL + mx * (wl - dryL)) * g;
         right[i] = (dryR + mx * (wr - dryR)) * g;
     }
 
+    if (wentBad)
+        reset();
+
+    // The old tail died away on its own: stop computing it (over a whole
+    // block, as the loop's energy dips near zero at moments).
+    if (fadingThisBlock && tailFading && oldPeakEnergy < kTailGoneEnergy)
+    {
+        tailLevel = 0.0f;
+        tailFading = false;
+    }
+
+    outMeters[0].process (left, numSamples);
+    outMeters[1].process (right, numSamples);
+
     tailEnergyDb.store (energy > 1.0e-10f ? 10.0f * std::log10 (energy) : -100.0f, std::memory_order_relaxed);
     for (float held = inputPeakHold.load (std::memory_order_relaxed);
          inputPeak > held && ! inputPeakHold.compare_exchange_weak (held, inputPeak, std::memory_order_relaxed);) {}
-    activeFloor.store ((int) activeMode, std::memory_order_relaxed);
-    modeFadeLevel.store (switchingMode ? modeFade : std::min (1.0f, modeFade), std::memory_order_relaxed);
+    activeFloor.store ((int) liveSpace().mode, std::memory_order_relaxed);
+    modeFadeLevel.store (tailFading ? 1.0f - tailLevel : 1.0f, std::memory_order_relaxed);
 }
 
 } // namespace sth

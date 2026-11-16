@@ -111,7 +111,7 @@ void ReflectionsView::paint (juce::Graphics& g)
     if (predelayMs > 0.02f * spanMs)
     {
         const float y1 = yOf (predelayMs);
-        g.setColour (theme::accent.withAlpha (0.5f));
+        g.setColour (accent.withAlpha (0.5f));
         const float dashes[] { 3.0f, 3.0f };
         g.drawDashedLine (juce::Line<float> (inner.getCentreX(), plot.getBottom(), inner.getCentreX(), y1), dashes, 2, 1.4f);
         g.drawHorizontalLine ((int) y1, inner.getCentreX() - 4.0f, inner.getCentreX() + 4.0f);
@@ -129,7 +129,6 @@ void ReflectionsView::paint (juce::Graphics& g)
 
     // The reflections, bottom to top.
     const float litUntil = walkClock < 0.0f ? -1.0f : spanMs * juce::jmin (1.0f, walkClock / walkSeconds);
-    const auto light = mode == Mode::heaven ? theme::shimmer : theme::glow;
     for (const auto& r : reflections)
     {
         if (r.gain <= 0.0f)
@@ -141,7 +140,7 @@ void ReflectionsView::paint (juce::Graphics& g)
 
         // Darker for the duller reflections (lower low-pass).
         const float bright = juce::jlimit (0.0f, 1.0f, (r.lowpassHz - 4000.0f) / 12000.0f);
-        auto colour = theme::accent.interpolatedWith (theme::dimText, 0.6f * (1.0f - bright));
+        auto colour = accent.interpolatedWith (theme::dimText, 0.6f * (1.0f - bright));
         float alpha = level * (0.35f + 0.65f * r.gain);
 
         // The sweep: lit as it passes, fading after.

@@ -17,6 +17,8 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Theme.h"
+#include <functional>
 
 class FloorSelector : public juce::Component,
                       public juce::SettableTooltipClient
@@ -31,8 +33,8 @@ public:
     void mouseMove (const juce::MouseEvent& e) override;
     void mouseExit (const juce::MouseEvent& e) override;
 
-    /** The top floor is drawn in this colour when lit (Heaven's sparkle). */
-    juce::Colour topFloorColour { juce::Colours::lightblue };
+    /** Each floor's colour when lit (sth::theme::accentForFloor by default). */
+    std::function<juce::Colour (int)> floorColour = [] (int i) { return sth::theme::accentForFloor ((float) i); };
 
 private:
     int floorAt (juce::Point<float> p) const;

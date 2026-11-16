@@ -55,7 +55,9 @@ namespace sth::tips::global
                                       "Plate, Hall, and Heaven (a large hall whose tail climbs in pitch).";
     inline constexpr auto freeze    = "Freeze. \n Holds the tail for ever and stops taking new sound in. Play over it.";
     inline constexpr auto mix       = "Mix. \n Balance between the dry signal and the reverb.";
-    inline constexpr auto output    = "Output level.";
+    inline constexpr auto output    = "Gain. \n Output level, after the mix.";
+    inline constexpr auto inputMeter  = "Input level (left, right): the bar is the RMS, the line the peak held a second.";
+    inline constexpr auto outputMeter = "Output level (left, right), after Mix and Gain: the bar is the RMS, the line the peak held a second.";
     inline constexpr auto stairs    = "The decay stairs: one step per third of an octave, its height the time the tail lasts there. "
                                       "Damping lowers the steps on the right, Bass raises or lowers them on the left. "
                                       "The light at the top is the tail itself.";
@@ -63,6 +65,6 @@ namespace sth::tips::global
                                         "reflection, left or right as it is heard (its size the level, darker when duller). "
                                         "The dashed stretch is the pre-delay. They light up in turn when a sound starts.";
     inline constexpr auto floorIndicator = "The floor sounding now. An arrow lights while the reverb travels to another "
-                                           "floor (it fades out, switches and fades back in: the tail is cleared).";
+                                           "floor: the new space takes the sound at once while the old one's tail fades out.";
     inline constexpr auto tooltips  = "Hover help on the controls: on or off.";
 }

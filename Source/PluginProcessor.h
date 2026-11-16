@@ -86,6 +86,12 @@ public:
     }
     float getModeFade() noexcept         { return engine.getModeFade().load (std::memory_order_relaxed); }
 
+    /** The level meters (channel 0 left, 1 right). On an FxmeNet mirror the
+        server's levels are written into them, so the editor reads them the
+        same way everywhere. */
+    fxme::VuMeter& getInputMeter (int ch) noexcept   { return engine.getInputMeter (ch); }
+    fxme::VuMeter& getOutputMeter (int ch) noexcept  { return engine.getOutputMeter (ch); }
+
     /** True the first time it is asked in this plugin instance: the splash is
         shown once, not each time the window opens. */
     bool takeFirstSplash() noexcept      { return ! std::exchange (splashShown, true); }

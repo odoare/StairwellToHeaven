@@ -2,6 +2,56 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## Fix: output bursts and a reverb stuck silent (2026-11-16)
+
+Seen in Reaper: a very loud burst (Reaper muted the track), then nothing
+from the plugin, meters included, until the instance was reloaded. Two
+bugs, both in FxmeTools (not pushed yet: todo 1), found by fuzzing the
+engine (random parameters, modes and Freeze, 44.1/48/96 kHz):
+
+- `TankReverb`, Freeze glide: the mid gain and the shelves' ratios blended
+  to 1 separately, so their product (the loop gain) passed 1 halfway; with
+  a short Decay and Bass up the low shelf's ratio is in the thousands
+  (+127 dB in the test). The guard then cleared the tank, and a frozen empty
+  tank stays silent. Now each band's gain (mid, low, high) blends to 1 on
+  its own, the low shelf is computed without the ratio, and the guard also
+  checks the absorption's output (before the lines the taps read fill up).
+  `CoreReverbTests` 9.
+- `ModDelayLine::read`: a position a hair behind the write pointer rounded
+  to one past the buffer's end (a read out of bounds, of whatever lies
+  there: up to 1e23, or a NaN that then stayed in a filter). Every line was
+  exposed (pre-delay, ER, tank). `CoreReverbTests` 10.
+
+The engine also mutes a wet that goes bad anyway (NaN, past +60 dBFS) and
+clears itself at the end of the block. After the fixes the fuzz's worst
+output is 2.9 (input up to 1), never non-finite.
+
+## 5, 13, 14, 15, 16. Crossfade, meters, fader names, title, floor colours (2026-11-16)
+
+- 5. A true crossfade on mode change: two spaces (tank and ER each); the
+  new mode starts clean in the idle one and takes the input, the old one's
+  tail fades out over 1 s (or sooner once it is under -100 dB). A change
+  while a tail still fades hurries it (30 ms) and waits. `EngineTests` 6
+  rewritten: no click, the tail kept (-1.8 dB 50 ms after the switch), gone
+  after 1.6 s, a quick second change without a click.
+- 13. Input and output meters (`fxme::StereoLevelMeter`, from four
+  `fxme::VuMeter`s in the engine), registered with FxmeNet as `inL`, `inR`,
+  `outL`, `outR`.
+- 14. "In", "Mix", "Gain" and "Out" above the meters and faders; the Output
+  fader is named Gain on screen (the parameter keeps its name and ID).
+- 15. The title is `Source/Assets/title.png`, through a new
+  `fxme::TopBar::setTitleImage` (FxmeTools, not pushed yet: see todo 1).
+- 16. The accent follows the floor: pale gold (Room) to salmon (Hall) to
+  blue (Heaven), gliding on a change; every control, both displays, the
+  meters and the window's light take it.
+- Built (VST3, CLAP, Standalone, Linux) and checked in the standalone on the
+  three colours; not yet in a host.
+
+## 8. Artwork (2026-11-16)
+
+The splash and the icon are the real ones (by the author), replacing the
+placeholders drawn by a script.
+
 ## 10. FxmeNet (2026-11-07)
 
 The processor holds a `fxme::net::NetBridge` and registers the editor's

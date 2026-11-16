@@ -25,6 +25,7 @@
 
 #include <JuceHeader.h>
 #include "Dsp/StairwellEngine.h"
+#include "Theme.h"
 #include <array>
 #include <functional>
 
@@ -45,6 +46,14 @@ public:
 
     void paint (juce::Graphics& g) override;
 
+    /** The floor's accent and light (the editor sets them as the floor changes). */
+    void setColours (juce::Colour accentColour, juce::Colour lightColour)
+    {
+        accent = accentColour;
+        light = lightColour;
+        repaint();
+    }
+
 private:
     void timerCallback() override;
 
@@ -53,5 +62,6 @@ private:
     std::function<Snapshot()> source;
     std::array<float, numSteps> rt60 {};
     float midRt60 = 0.0f, yMax = 4.0f, glow = 0.0f;
-    bool frozen = false, heaven = false;
+    bool frozen = false;
+    juce::Colour accent = sth::theme::accent, light = sth::theme::glow;
 };

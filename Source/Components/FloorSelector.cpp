@@ -56,7 +56,7 @@ void FloorSelector::paint (juce::Graphics& g)
     {
         auto row = floorBounds (i);
         const bool lit = i == selected, hover = i == hovered;
-        const auto light = i == names.size() - 1 ? topFloorColour : theme::accent;
+        const auto light = floorColour (i);
 
         const float d = juce::jmin (row.getHeight() - 10.0f, 30.0f);
         auto button = juce::Rectangle<float> (d, d).withCentre ({ row.getX() + 8.0f + d * 0.5f, row.getCentreY() });

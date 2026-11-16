@@ -32,6 +32,7 @@
 
 #include <JuceHeader.h>
 #include "Dsp/StairwellEngine.h"
+#include "Theme.h"
 #include <functional>
 
 class ReflectionsView : public juce::Component,
@@ -50,6 +51,14 @@ public:
 
     void paint (juce::Graphics& g) override;
 
+    /** The floor's accent and light (the editor sets them as the floor changes). */
+    void setColours (juce::Colour accentColour, juce::Colour lightColour)
+    {
+        accent = accentColour;
+        light = lightColour;
+        repaint();
+    }
+
 private:
     void timerCallback() override;
 
@@ -60,6 +69,7 @@ private:
     sth::StairwellEngine::Reflections reflections {};
     float predelayMs = 0.0f, spanMs = 100.0f, level = 1.0f, width = 1.0f;
     sth::Mode mode = sth::Mode::hall;
+    juce::Colour accent = sth::theme::accent, light = sth::theme::glow;
 
     float inputAverageDb = -80.0f;    // a slow follower of the input's peaks
     float walkClock = -1.0f;          // seconds since the last onset, -1: none

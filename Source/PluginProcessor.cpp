@@ -53,6 +53,10 @@ StairwellAudioProcessor::StairwellAudioProcessor()
     net.telemetry().addValue ("fade", engine.getModeFade());       // the floor indicator
     net.telemetry().addScalar ("floor", [this] { return (float) engine.getActiveFloor().load (std::memory_order_relaxed); });
     net.telemetry().addPeak ("input", [this] { return engine.takeInputPeak(); });   // the reflections' sweep
+    net.telemetry().addMeter ("inL",  engine.getInputMeter (0));    // the level meters
+    net.telemetry().addMeter ("inR",  engine.getInputMeter (1));
+    net.telemetry().addMeter ("outL", engine.getOutputMeter (0));
+    net.telemetry().addMeter ("outR", engine.getOutputMeter (1));
 }
 
 StairwellAudioProcessor::~StairwellAudioProcessor() = default;

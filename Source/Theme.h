@@ -4,8 +4,10 @@
 
     StairwellToHeaven's look, in one place. The identity is a climb: dark
     stone at the bottom of the window, warm light at the top. The panels are
-    the stone; the accent is the light (a pale gold), brightest where the
-    tail goes (the top of the decay stairs, Heaven, Freeze's halo).
+    the stone; the accent is the light, brightest where the tail goes (the
+    top of the decay stairs, Heaven, Freeze's halo). The light changes with
+    the floor (accentForFloor): pale gold in the Room, salmon in the Hall,
+    blue in Heaven; the editor glides it when the floor changes.
 
     Author: Olivier Doaré, github.com/odoare
     (c) 2026 Olivier Doaré
@@ -30,7 +32,9 @@ namespace sth::theme
     inline const juce::Colour panelLine  { 0xff3c3a46 };
 
     // Light.
-    inline const juce::Colour accent     { 0xffe8c46a };   // pale gold
+    inline const juce::Colour accent     { 0xffe8c46a };   // pale gold: the Room's, and the default
+    inline const juce::Colour hallAccent   { 0xffef9479 };   // salmon
+    inline const juce::Colour heavenAccent { 0xff9fc6ff };   // blue
     inline const juce::Colour glow       { 0xfffff1cf };   // the light at the top
     inline const juce::Colour shimmer    { 0xffb9d8ff };   // Heaven's pitched sparkle
     inline const juce::Colour frozen     { 0xffaee6ff };   // Freeze
@@ -45,6 +49,21 @@ namespace sth::theme
     inline constexpr int minWidth      = 760;
     inline constexpr int minHeight     = 520;
     inline constexpr int margin        = 10;
+
+    /** The accent on floor `floor` (0 Room .. 4 Heaven, fractional while
+        gliding): gold to salmon up to the Hall, then salmon to blue. */
+    inline juce::Colour accentForFloor (float floor)
+    {
+        const float f = juce::jlimit (0.0f, 4.0f, floor);
+        return f <= 3.0f ? accent.interpolatedWith (hallAccent, f / 3.0f)
+                         : hallAccent.interpolatedWith (heavenAccent, f - 3.0f);
+    }
+
+    /** The light an accent gives (the window's glow, the stairs' light). */
+    inline juce::Colour lightFor (juce::Colour a)
+    {
+        return a.interpolatedWith (juce::Colours::white, 0.72f);
+    }
 
     inline void styleKnob (juce::Slider& s, juce::Colour a = accent)
     {

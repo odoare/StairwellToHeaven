@@ -29,7 +29,8 @@ namespace
         "  Plate      bright and dense at once, no early reflections\n"
         "  Hall       slower build-up, long and dark\n"
         "  Heaven     a large hall whose tail climbs in pitch (Shimmer)\n"
-        "Changing floors fades the reverb out and back in (the tail is cleared).\n\n"
+        "Changing floors crossfades: the new space takes the sound at once while the "
+        "old one's tail fades out over a second.\n\n"
         "The stairs: one step per third of an octave, as high as the tail lasts "
         "there. Damping lowers the steps on the right (above its frequency), Bass "
         "raises or lowers those on the left (under the crossover). The light above "
@@ -92,7 +93,7 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
       shimmer2Knob  (p.getAPVTS(), ids::shimmer2,  "Shimmer 2",  theme::shimmer),
       pitchedInputKnob (p.getAPVTS(), ids::pitchedInput, "Pitched in", theme::shimmer),
       mixFader      (p.getAPVTS(), ids::mix,       "Mix",        theme::accent),
-      outputFader   (p.getAPVTS(), ids::output,    "Output",     theme::accent)
+      outputFader   (p.getAPVTS(), ids::output,    "Gain",       theme::accent)
 {
     laf.setAccentColour (theme::accent);
     setLookAndFeel (&laf);
@@ -113,12 +114,12 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     infoButton.setInfo (theme::displayName, helpBody);
     topBar.setRightControls ({ { &presetBar, 236 }, { &tooltipsButton, 24 }, { &infoButton, 22 } });
     topBar.setDecoration (assetImage ("icon_png"));
+    topBar.setTitleImage (assetImage ("title_png"));
     topBar.onLogoClicked = [this] { splash.show (-1); };
 
     // Floors and Freeze.
     floorIndicator.setTooltip (tips::global::floorIndicator);
     addAndMakeVisible (floorIndicator);
-    floors.topFloorColour = theme::shimmer;
     floors.setTooltip (tips::global::mode);
     addAndMakeVisible (floors);
     freezeButton.lightColour = theme::frozen;
@@ -182,6 +183,8 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     setUpFader (mixFader, tips::global::mix);
     setUpFader (outputFader, tips::global::output);
     outputFader.setCentralValue (0.0);
+    setUpMeter (inMeter, tips::global::inputMeter);
+    setUpMeter (outMeter, tips::global::outputMeter);
 
     setResizable (true, true);
     setResizeLimits (theme::minWidth, theme::minHeight, 1800, 1200);
@@ -230,6 +233,66 @@ void StairwellAudioProcessorEditor::setUpFader (fxme::FxmeSlider& fader, const c
     addAndMakeVisible (fader);
 }
 
+void StairwellAudioProcessorEditor::setUpMeter (fxme::StereoLevelMeter& meter, const char* tooltip)
+{
+    meter.setRange (-60.0f, 6.0f);
+    meter.setTooltip (tooltip);
+    addAndMakeVisible (meter);
+}
+
+void StairwellAudioProcessorEditor::applyAccent (juce::Colour a)
+{
+    accent = a;
+    laf.setAccentColour (a);
+    topBar.setAccentColour (a);
+    presetBar.setAccentColour (a);
+    tooltipsButton.setAccent (a, theme::dimText);
+    infoButton.setColours ({ a, theme::text, theme::stone, theme::panelLine });
+    syncButton.setAccent (a, theme::dimText, theme::stoneLight);
+    splash.setLinkColour (a);
+
+    for (auto* knob : { &decayKnob, &sizeKnob, &predelayKnob, &diffusionKnob, &dampingKnob, &dampFreqKnob,
+                        &bassKnob, &crossoverKnob, &lowCutKnob, &highCutKnob, &modRateKnob, &modDepthKnob,
+                        &erLateKnob, &widthKnob })
+        theme::styleKnob (*knob, a);
+    theme::styleCombo (divisionBox, a);
+    for (auto* fader : { &mixFader, &outputFader })
+    {
+        fader->setColour (juce::Slider::trackColourId, a.darker());
+        fader->setColour (juce::Slider::thumbColourId, a);
+        fader->setColour (juce::Slider::rotarySliderOutlineColourId, a.darker (2.0f));
+    }
+    for (auto* meter : { &inMeter, &outMeter })
+    {
+        fxme::StereoLevelMeter::Colours c;
+        c.background = theme::stoneDeep;
+        c.outline = theme::panelLine;
+        c.bar = a.withMultipliedSaturation (0.85f).darker (0.15f);
+        c.peak = theme::lightFor (a);
+        meter->setColours (c);
+    }
+
+    const auto light = theme::lightFor (a);
+    reflections.setColours (a, light);
+    stairs.setColours (a, light);
+    repaint();
+}
+
+void StairwellAudioProcessorEditor::updateMeters()
+{
+    // Each meter's held max is taken (read and reset) here, the one reader.
+    auto feed = [] (fxme::StereoLevelMeter& view, int ch, fxme::VuMeter& m)
+    {
+        view.update (ch, m.getRMS(), m.getMax());
+        m.resetMax();
+    };
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        feed (inMeter, ch, processor.getInputMeter (ch));
+        feed (outMeter, ch, processor.getOutputMeter (ch));
+    }
+}
+
 void StairwellAudioProcessorEditor::timerCallback()
 {
     auto& apvts = processor.getAPVTS();
@@ -249,13 +312,25 @@ void StairwellAudioProcessorEditor::timerCallback()
         repaint (heavenGroup);
     }
 
+    // The floor's colour, gliding to the selected floor (at once on opening).
+    const float floor = (float) juce::roundToInt (apvts.getRawParameterValue (ids::mode)->load());
+    if (colourFloor < 0.0f || std::abs (floor - colourFloor) > 0.0f)
+    {
+        const float next = colourFloor < 0.0f || std::abs (floor - colourFloor) < 0.02f
+                               ? floor : colourFloor + 0.2f * (floor - colourFloor);
+        colourFloor = next;
+        applyAccent (theme::accentForFloor (colourFloor));
+    }
+
+    updateMeters();
+
     // The window's light: the tail's energy from -60 dB (dark) to 0 dB, up
     // fast, down slowly; frozen, a steady glow.
     const bool frozen = apvts.getRawParameterValue (ids::freeze)->load() > 0.5f;
     const float energy = juce::jlimit (0.0f, 1.0f, (processor.getTailEnergyDb() + 60.0f) / 60.0f);
     const float target = frozen ? juce::jmax (0.7f, energy) : energy;
     const float light = windowLight + (target > windowLight ? 0.4f : 0.06f) * (target - windowLight);
-    const auto colour = frozen ? theme::frozen : (heaven ? theme::shimmer : theme::glow);
+    const auto colour = frozen ? theme::frozen : theme::lightFor (accent);
     if (std::abs (light - windowLight) > 0.004f || colour != windowLightColour)
     {
         windowLight = light;
@@ -298,6 +373,16 @@ void StairwellAudioProcessorEditor::paint (juce::Graphics& g)
         g.restoreState();
         g.setColour (theme::panelLine.withAlpha (0.6f));
         g.drawVerticalLine (row.getX() + 15, (float) row.getY() + 8.0f, (float) row.getBottom() - 8.0f);
+    }
+
+    // The names above the meters and the faders.
+    g.setFont (juce::FontOptions (11.0f, juce::Font::bold));
+    const std::pair<juce::Rectangle<int>, const char*> levelNames[] { { inLabel, "In" }, { mixLabel, "Mix" },
+                                                                       { gainLabel, "Gain" }, { outLabel, "Out" } };
+    for (const auto& [box, name] : levelNames)
+    {
+        g.setColour (box == mixLabel || box == gainLabel ? theme::text : theme::dimText);
+        g.drawText (name, box, juce::Justification::centred, false);
     }
 
     // The HEAVEN group in Motion: a frame with its title, lit in Heaven's
@@ -347,10 +432,25 @@ void StairwellAudioProcessorEditor::resized()
     floors.setBounds (left);
     area.removeFromLeft (theme::margin);
 
-    // Right: Mix and Output.
-    auto right = area.removeFromRight (130);
-    mixFader.setBounds (right.removeFromLeft (62));
-    outputFader.setBounds (right.removeFromLeft (62));
+    // Right: the input meter, Mix and Gain, the output meter; each named
+    // above.
+    {
+        auto right = area.removeFromRight (170);
+        auto names = right.removeFromTop (16);
+        auto column = [&] (int w, juce::Rectangle<int>& label)
+        {
+            label = names.removeFromLeft (w);
+            return right.removeFromLeft (w);
+        };
+        constexpr int meterW = 20, faderW = 62;
+        // The meters span the faders' travel, not their value read-outs.
+        inMeter.setBounds (column (meterW, inLabel).reduced (3, 0).withTrimmedTop (6).withTrimmedBottom (24));
+        mixFader.setBounds (column (faderW, mixLabel));
+        outputFader.setBounds (column (faderW, gainLabel));
+        names.removeFromLeft (right.getWidth() - meterW);
+        right.removeFromLeft (right.getWidth() - meterW);
+        outMeter.setBounds (column (meterW, outLabel).reduced (3, 0).withTrimmedTop (6).withTrimmedBottom (24));
+    }
     area.removeFromRight (theme::margin);
 
     // Centre: three rows of knobs.

@@ -51,7 +51,6 @@ void DecayStairs::timerCallback()
     const auto settings = sth::StairwellEngine::tankSettingsFor (snap.params);
 
     frozen = snap.params.freeze;
-    heaven = snap.params.mode == sth::Mode::heaven;
     float highest = 0.0f;
     for (int i = 0; i < numSteps; ++i)
     {
@@ -85,12 +84,12 @@ void DecayStairs::paint (juce::Graphics& g)
 
     // The light above the stairs.
     {
-        const auto lightColour = frozen ? theme::frozen : (heaven ? theme::shimmer : theme::glow);
+        const auto lightColour = frozen ? theme::frozen : light;
         const float a = frozen ? 0.55f : 0.12f + 0.45f * glow;
-        juce::ColourGradient light (lightColour.withAlpha (a), plot.getCentreX(), plot.getY() - plot.getHeight() * 0.2f,
-                                    lightColour.withAlpha (0.0f), plot.getCentreX(), plot.getY() + plot.getHeight() * 0.75f,
-                                    true);
-        g.setGradientFill (light);
+        juce::ColourGradient beam (lightColour.withAlpha (a), plot.getCentreX(), plot.getY() - plot.getHeight() * 0.2f,
+                                   lightColour.withAlpha (0.0f), plot.getCentreX(), plot.getY() + plot.getHeight() * 0.75f,
+                                   true);
+        g.setGradientFill (beam);
         g.fillRect (plot);
     }
 
@@ -128,13 +127,13 @@ void DecayStairs::paint (juce::Graphics& g)
         const float top = plot.getBottom() - plot.getHeight() * frac;
 
         auto step = juce::Rectangle<float> (x0, top, std::max (1.0f, x1 - x0), plot.getBottom() - top);
-        const auto topColour = frozen ? theme::frozen : theme::stoneLight.interpolatedWith (theme::accent, 0.35f + 0.65f * frac);
+        const auto topColour = frozen ? theme::frozen : theme::stoneLight.interpolatedWith (accent, 0.35f + 0.65f * frac);
         juce::ColourGradient body (topColour.withAlpha (0.9f), 0.0f, top, theme::stone, 0.0f, plot.getBottom(), false);
         g.setGradientFill (body);
         g.fillRect (step);
 
         // The tread: a bright edge on top of each step.
-        g.setColour ((frozen ? theme::frozen : theme::glow).withAlpha (0.55f + 0.45f * frac));
+        g.setColour ((frozen ? theme::frozen : light).withAlpha (0.55f + 0.45f * frac));
         g.fillRect (step.withHeight (1.5f));
         g.setColour (theme::stoneDeep.withAlpha (0.6f));
         g.drawVerticalLine ((int) x1, top, plot.getBottom());

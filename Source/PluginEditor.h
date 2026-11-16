@@ -4,9 +4,9 @@
 
     StairwellToHeaven's window:
 
-      top bar     name, version, the preset bar with its browser, the "?"
-                  (hover help on/off) and the info button; the icon opens
-                  the splash.
+      top bar     the title (artwork), version, the preset bar with its
+                  browser, the "?" (hover help on/off) and the info button;
+                  the icon opens the splash.
       top         across the whole width: the early reflections (time up,
                   one circle per reflection placed by its pan)
                   and the decay stairs (RT60 against frequency, with the
@@ -21,10 +21,15 @@
                   depth, width, then the framed HEAVEN group: the two
                   shimmer voices, each with its interval menu under it, and
                   Pitched input);
-                  right, the Mix and Output faders.
+                  right, the input meter, the Mix and Gain faders (named
+                  above them) and the output meter.
 
     The backdrop's light follows the reverb's tail: the window brightens as
     it blooms and dims as it dies (steady while frozen).
+
+    The whole window takes the floor's colour (theme::accentForFloor): pale
+    gold in the Room, salmon in the Hall, blue in Heaven, gliding from one
+    to the next when the floor changes (applyAccent()).
 
     Controls that do nothing in the current state are disabled (the
     pre-delay knob while synced and the note menu while not, the shimmer
@@ -62,6 +67,9 @@ private:
     void timerCallback() override;
     void setUpKnob (fxme::FxmeSlider& knob, const char* tooltip, bool logarithmic = false);
     void setUpFader (fxme::FxmeSlider& fader, const char* tooltip);
+    void setUpMeter (fxme::StereoLevelMeter& meter, const char* tooltip);
+    void applyAccent (juce::Colour accent);
+    void updateMeters();
 
     static juce::Image logoImage();
     static juce::Image assetImage (const char* resourceName);
@@ -91,6 +99,8 @@ private:
     juce::ComboBox pitchBox, pitch2Box;   // the two shimmer voices' intervals, stacked in one column
     // Levels
     fxme::FxmeSlider mixFader, outputFader;
+    fxme::StereoLevelMeter inMeter, outMeter;
+    juce::Rectangle<int> inLabel, mixLabel, gainLabel, outLabel;   // the names above them
 
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
     using ComboAttachment  = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
@@ -105,6 +115,11 @@ private:
         slowly, held while frozen; and its colour (pale blue in Heaven). */
     float windowLight = 0.0f;
     juce::Colour windowLightColour = sth::theme::glow;
+
+    /** The floor whose colour the window wears (fractional while gliding to
+        the selected one) and that colour. */
+    float colourFloor = -1.0f;
+    juce::Colour accent = sth::theme::accent;
 
     /** The splash: over everything, once per instance for 3 s, and until
         clicked from the top bar's icon or logo. */

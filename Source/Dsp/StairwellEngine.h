@@ -40,9 +40,19 @@
     interval and climbs from there. The shifters delay that path by about
     24 ms (half their 40 ms window), which only adds to the pre-delay.
 
-    Changing the mode fades the wet out (30 ms), clears the tank and the ER
-    (their delay lengths jump), applies the voicing and fades back in: no
-    click, at the price of the tail. Size within a mode glides instead.
+    Changing the mode crossfades two spaces (a tank and its early
+    reflections each). The new mode starts in the idle space, cleared, and
+    takes the input from then on; the old space stops taking input and its
+    tail rings on, fading out over a second (sooner once it has died away).
+    No click, and the tail is kept: it costs twice the tank's CPU during the
+    fade only. A further change while a tail is still fading speeds that
+    fade up (30 ms) and waits for it, so no tail is ever cut. Size within a
+    mode glides instead.
+
+    Safety: the input is sanitised; the tank clears itself if its loop goes
+    bad; and a wet that goes bad anyway (NaN, or past +60 dBFS) is muted and
+    the whole reverb cleared at the end of the block (reset()), so no bad
+    state can stay in a filter or a line.
 
     Threading: prepare() allocates; setParameters() and process() are
     realtime safe (setParameters() once per block).
@@ -60,6 +70,7 @@
 #include <FxmeTools/dsp/TankReverb.h>
 #include <FxmeTools/dsp/SplicePitchShifter.h>
 #include <FxmeTools/dsp/TptSvf.h>
+#include <FxmeTools/dsp/VuMeter.h>
 #include <array>
 #include <atomic>
 
@@ -151,19 +162,36 @@ public:
         the GUI's tail glow and FxmeNet. */
     std::atomic<float>& getTailEnergyDb() noexcept { return tailEnergyDb; }
 
+    /** The input and output meters (left, right), for the GUI and FxmeNet. */
+    fxme::VuMeter& getInputMeter (int ch) noexcept   { return inMeters[(size_t) (ch & 1)]; }
+    fxme::VuMeter& getOutputMeter (int ch) noexcept  { return outMeters[(size_t) (ch & 1)]; }
+
     /** The input's peak (linear) since the last call, which resets it: the
         GUI polls it on a timer slower than the blocks, so the peak is held
         until taken and no hit is missed. The reflections view sweeps on its onsets. */
     float takeInputPeak() noexcept { return inputPeakHold.exchange (0.0f, std::memory_order_relaxed); }
 
-    /** The floor actually sounding (it lags the parameter during a mode
-        change), and the wet's level through that change (1 when settled,
-        down to 0 at the switch): for the GUI's floor indicator. */
+    /** The floor actually sounding (it lags the parameter while a change
+        waits for the previous tail to fade), and how far the crossfade is
+        (0 at the switch, 1 once the old tail is gone): for the GUI's floor
+        indicator. */
     std::atomic<int>& getActiveFloor() noexcept    { return activeFloor; }
     std::atomic<float>& getModeFade() noexcept     { return modeFadeLevel; }
 
 private:
-    void applyMode (Mode m) noexcept;
+    /** A tank and its early reflections, voiced for one mode. Two of them:
+        the one sounding, and the one whose tail fades after a mode change. */
+    struct Space
+    {
+        fxme::TankReverb tank;
+        fxme::EarlyReflections er;
+        Mode mode = Mode::hall;
+        float erIntoTank = 0.0f;
+    };
+
+    void voice (Space& s, Mode m) noexcept;
+    void updateSpace (Space& s) noexcept;
+    void startSwitch() noexcept;
 
     struct Smoothed
     {
@@ -174,23 +202,25 @@ private:
 
     double fs = 48000.0;
     Parameters params;
-    Mode activeMode = Mode::hall;
 
-    fxme::TankReverb tank;
-    fxme::EarlyReflections er;
+    std::array<Space, 2> spaces;
+    int live = 0;                       // spaces[live] sounds and takes the input
+    Space& liveSpace() noexcept         { return spaces[(size_t) live]; }
+    Space& fadingSpace() noexcept       { return spaces[(size_t) (1 - live)]; }
+
     std::array<fxme::ModDelayLine, 2> predelay;
     fxme::SplicePitchShifter inputShifter1, inputShifter2;   // Pitched input, mono
     float inputWeight1 = 1.0f, inputWeight2 = 0.0f;
     bool  pitchedInputActive = false;
     std::array<fxme::TptSvf, 2> lowCut, highCut;
     bool lowCutOn = false, highCutOn = false;
+    std::array<fxme::VuMeter, 2> inMeters, outMeters;
 
     Smoothed predelaySamples, mix, outGain, erGain, lateGain, width, pitchedMix;
-    float erIntoTank = 0.0f;
 
-    // Mode change: the wet fades out, the mode switches, it fades back in.
-    float modeFade = 1.0f, modeFadeStep = 0.001f;
-    bool  switchingMode = false;
+    // Mode change: the old space's tail fades (1 .. 0) while the new one plays.
+    bool  tailFading = false;
+    float tailLevel = 0.0f, tailStep = 0.001f;
 
     std::atomic<float> tailEnergyDb { -100.0f };
     std::atomic<float> inputPeakHold { 0.0f };
