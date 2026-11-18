@@ -206,7 +206,7 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     addChildComponent (splash);
     splash.setBounds (getLocalBounds());
     if (processor.takeFirstSplash())
-        splash.show (3000);
+        splash.show (1000);
 
     timerCallback();
     startTimerHz (20);

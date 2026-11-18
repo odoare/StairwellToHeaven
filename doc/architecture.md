@@ -282,7 +282,7 @@ IDs are permanent (sessions and presets store them). Version 1 for all.
   the FX-Mechanics link, the preset bar with its browser ("..."), the "?"
   (hover help on or off, machine-wide in `AppSettings.h`) and the info
   button (help text); the icon in the bar and the logo open the splash; the
-  splash shows for 3 s the first time an instance opens its window.
+  splash shows for 1 s the first time an instance opens its window.
   Tooltips all in `Tooltips.h`. One `TextEntryFocusFixer`. Look-and-feel set
   on the editor (combos inherit it).
 - **The floor's colour**: the accent follows the floor

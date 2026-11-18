@@ -131,7 +131,7 @@ private:
     float colourFloor = -1.0f;
     juce::Colour accent = sth::theme::accent;
 
-    /** The splash: over everything, once per instance for 3 s, and until
+    /** The splash: over everything, once per instance for 1 s, and until
         clicked from the top bar's icon or logo. */
     fxme::SplashOverlay splash;
 
