@@ -186,6 +186,16 @@ StairwellAudioProcessorEditor::StairwellAudioProcessorEditor (StairwellAudioProc
     setUpMeter (inMeter, tips::global::inputMeter);
     setUpMeter (outMeter, tips::global::outputMeter);
 
+    // CPU: the window light repaints the whole window while the tail plays.
+    // Every control and display is cached as an image, redrawn only when it
+    // changes itself, so those repaints only draw the backdrop and copy the
+    // images over it; the top bar fills its bounds, so nothing is painted
+    // under it.
+    for (auto* c : getChildren())
+        if (c != &tooltipWindow)
+            c->setBufferedToImage (true);
+    topBar.setOpaque (true);
+
     setResizable (true, true);
     setResizeLimits (theme::minWidth, theme::minHeight, 1800, 1200);
     setSize (theme::defaultWidth, theme::defaultHeight);
@@ -329,13 +339,16 @@ void StairwellAudioProcessorEditor::timerCallback()
     const bool frozen = apvts.getRawParameterValue (ids::freeze)->load() > 0.5f;
     const float energy = juce::jlimit (0.0f, 1.0f, (processor.getTailEnergyDb() + 60.0f) / 60.0f);
     const float target = frozen ? juce::jmax (0.7f, energy) : energy;
-    const float light = windowLight + (target > windowLight ? 0.4f : 0.06f) * (target - windowLight);
+    windowLightLevel += (target > windowLightLevel ? 0.4f : 0.06f) * (target - windowLightLevel);
     const auto colour = frozen ? theme::frozen : theme::lightFor (accent);
-    if (std::abs (light - windowLight) > 0.004f || colour != windowLightColour)
+    // Repainted in steps of 1 % (finer is invisible: the light's alpha is
+    // at most 0.28), and only where the light reaches. The level glides on
+    // its own, so the small steps of a slow fade add up.
+    if (std::abs (windowLightLevel - windowLight) > 0.01f || colour != windowLightColour)
     {
-        windowLight = light;
+        windowLight = windowLightLevel;
         windowLightColour = colour;
-        repaint();
+        repaint (getLocalBounds().withHeight (juce::roundToInt ((float) getHeight() * theme::backdropLightReach) + 2));
     }
 }
 
@@ -355,7 +368,29 @@ juce::Image StairwellAudioProcessorEditor::logoImage()
 
 void StairwellAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    theme::paintBackdrop (g, getLocalBounds().toFloat(), windowLight, windowLightColour);
+    // The backdrop from its two pre-rendered layers (see backdropStone).
+    const auto bounds = getLocalBounds();
+    if (backdropStone.getBounds() != bounds)
+    {
+        backdropStone = juce::Image (juce::Image::RGB, juce::jmax (1, bounds.getWidth()), juce::jmax (1, bounds.getHeight()), false);
+        juce::Graphics sg (backdropStone);
+        theme::paintBackdropStone (sg, bounds.toFloat());
+        backdropLight = {};
+    }
+    g.drawImageAt (backdropStone, 0, 0);
+    if (windowLight > 0.001f)
+    {
+        if (backdropLight.getBounds() != bounds || backdropLightColour != windowLightColour)
+        {
+            backdropLight = juce::Image (juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+            juce::Graphics lg (backdropLight);
+            theme::paintBackdropLight (lg, bounds.toFloat(), windowLightColour);
+            backdropLightColour = windowLightColour;
+        }
+        g.setOpacity (juce::jmin (1.0f, windowLight));
+        g.drawImageAt (backdropLight, 0, 0);
+        g.setOpacity (1.0f);
+    }
 
     // Section names, left of each knob row.
     g.setFont (juce::FontOptions (11.0f, juce::Font::bold));

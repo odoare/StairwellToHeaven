@@ -62,6 +62,24 @@ public:
 private:
     void timerCallback() override;
 
+    /** Where things are drawn: the frame, the plot, the pan range (inside
+        the circles' margin) and the largest circle's radius. */
+    struct Geometry
+    {
+        juce::Rectangle<float> bounds, plot, inner;
+        float maxRadius;
+        float x (float pan) const   { return inner.getCentreX() + 0.5f * inner.getWidth() * juce::jlimit (-1.0f, 1.0f, pan); }
+    };
+    Geometry geometry() const;
+    float yOf (const Geometry& geo, float ms) const;
+
+    /** A reflection's centre and radius as drawn. */
+    juce::Point<float> centreOf (const Geometry& geo, const sth::StairwellEngine::Reflection& r) const;
+    static float radiusOf (const Geometry& geo, const sth::StairwellEngine::Reflection& r) { return geo.maxRadius * (0.35f + 0.65f * r.gain); }
+
+    /** Frames a second: the editor's rate, so their repaints share frames. */
+    static constexpr int frameRate = 20;
+
     static constexpr float walkSeconds = 0.5f;    // the lit sweep, bottom to top
     static constexpr float glowSeconds = 0.6f;    // how long a lit circle stays bright
 

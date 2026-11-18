@@ -51,17 +51,37 @@ public:
     {
         accent = accentColour;
         light = lightColour;
+        layerDirty = true;
         repaint();
     }
 
 private:
     void timerCallback() override;
 
+    /** The steps, the grid, the read-out and the frame: what changes with
+        the parameters, not with the tail (painted into `layer`). */
+    void paintLayer (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Rectangle<float> plot);
+
+    /** The plot (the stairs and their light), inside the frame and labels. */
+    juce::Rectangle<float> plotArea() const
+    {
+        return getLocalBounds().toFloat().reduced (1.0f).reduced (10.0f).withTrimmedLeft (26.0f).withTrimmedBottom (14.0f);
+    }
+
     static constexpr int numSteps = 30;   // thirds of an octave, 25 Hz .. 20 kHz
 
     std::function<Snapshot()> source;
     std::array<float, numSteps> rt60 {};
-    float midRt60 = 0.0f, yMax = 4.0f, glow = 0.0f;
+    float midRt60 = 0.0f, yMax = 4.0f, glow = 0.0f, glowDrawn = 0.0f;
     bool frozen = false;
     juce::Colour accent = sth::theme::accent, light = sth::theme::glow;
+
+    // CPU: the light follows the tail at 30 Hz. Its gradient is rendered
+    // once at full strength and blended at the tail's level; the rest is
+    // rendered once into `layer` (at the screen's pixel scale) and redrawn
+    // only when the parameters, the colours or the size change.
+    juce::Image beam, layer;
+    juce::Colour beamColour;
+    float layerScale = 0.0f;
+    bool layerDirty = true;
 };

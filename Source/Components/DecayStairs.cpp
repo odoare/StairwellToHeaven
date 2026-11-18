@@ -35,7 +35,7 @@ namespace
 DecayStairs::DecayStairs (std::function<Snapshot()> src) : source (std::move (src))
 {
     timerCallback();
-    startTimerHz (30);
+    startTimerHz (20);
 }
 
 DecayStairs::~DecayStairs()
@@ -49,6 +49,11 @@ void DecayStairs::timerCallback()
         return;
     const auto snap = source();
     const auto settings = sth::StairwellEngine::tankSettingsFor (snap.params);
+
+    // Repaint only on a visible change (or while frozen: the edge breathes).
+    const auto rt60Before = rt60;
+    const float midBefore = midRt60, yMaxBefore = yMax;
+    const bool frozenBefore = frozen;
 
     frozen = snap.params.freeze;
     float highest = 0.0f;
@@ -70,7 +75,28 @@ void DecayStairs::timerCallback()
     // The light follows the tail: -60 dB dark, 0 dB full.
     const float target = juce::jlimit (0.0f, 1.0f, (snap.tailEnergyDb + 60.0f) / 60.0f);
     glow += (target > glow ? 0.5f : 0.08f) * (target - glow);
-    repaint();
+
+    auto differs = [] (float a, float b) { return ! (std::abs (a - b) <= 1.0e-3f * std::max (1.0f, std::abs (a))); };
+    bool layerChanged = frozen != frozenBefore || differs (yMax, yMaxBefore) || differs (midRt60, midBefore);
+    for (size_t i = 0; i < rt60.size() && ! layerChanged; ++i)
+        layerChanged = differs (rt60[i], rt60Before[i]);
+    // The steps or the scale moved: everything. Only the light: the plot,
+    // in 2 % steps. Only Freeze's breathing: the plot's top edge.
+    if (layerChanged || frozen != frozenBefore)
+    {
+        layerDirty = true;
+        glowDrawn = glow;
+        repaint();
+    }
+    else if (std::abs (glow - glowDrawn) > 0.02f)
+    {
+        glowDrawn = glow;
+        repaint (plotArea().getSmallestIntegerContainer());
+    }
+    else if (frozen)
+    {
+        repaint (plotArea().withHeight (12.0f).getSmallestIntegerContainer());
+    }
 }
 
 void DecayStairs::paint (juce::Graphics& g)
@@ -80,19 +106,64 @@ void DecayStairs::paint (juce::Graphics& g)
     g.setColour (theme::stoneDeep);
     g.fillRoundedRectangle (bounds, 5.0f);
 
-    auto plot = bounds.reduced (10.0f).withTrimmedLeft (26.0f).withTrimmedBottom (14.0f);
+    const auto plot = plotArea();
+    if (plot.isEmpty())
+        return;
 
-    // The light above the stairs.
+    // The light above the stairs: its gradient at full strength, rendered
+    // once, blended at the tail's level.
     {
         const auto lightColour = frozen ? theme::frozen : light;
-        const float a = frozen ? 0.55f : 0.12f + 0.45f * glow;
-        juce::ColourGradient beam (lightColour.withAlpha (a), plot.getCentreX(), plot.getY() - plot.getHeight() * 0.2f,
-                                   lightColour.withAlpha (0.0f), plot.getCentreX(), plot.getY() + plot.getHeight() * 0.75f,
-                                   true);
-        g.setGradientFill (beam);
-        g.fillRect (plot);
+        const auto plotArea = plot.getSmallestIntegerContainer();
+        if (beam.getBounds() != plotArea.withZeroOrigin() || beamColour != lightColour)
+        {
+            beam = juce::Image (juce::Image::ARGB, plotArea.getWidth(), plotArea.getHeight(), true);
+            juce::Graphics bg (beam);
+            const auto r = plotArea.withZeroOrigin().toFloat();
+            juce::ColourGradient gradient (lightColour, r.getCentreX(), r.getY() - r.getHeight() * 0.2f,
+                                           lightColour.withAlpha (0.0f), r.getCentreX(), r.getY() + r.getHeight() * 0.75f,
+                                           true);
+            bg.setGradientFill (gradient);
+            bg.fillRect (r);
+            beamColour = lightColour;
+        }
+        g.setOpacity (frozen ? 0.55f : 0.12f + 0.45f * glowDrawn);
+        g.drawImageAt (beam, plotArea.getX(), plotArea.getY());
+        g.setOpacity (1.0f);
     }
 
+    // The steps, the grid, the read-out and the frame, from their image.
+    const float scale = g.getInternalContext().getPhysicalPixelScaleFactor();
+    const int lw = juce::roundToInt ((float) getWidth() * scale), lh = juce::roundToInt ((float) getHeight() * scale);
+    if (layerDirty || std::abs (layerScale - scale) > 1.0e-3f || layer.getWidth() != lw || layer.getHeight() != lh)
+    {
+        layer = juce::Image (juce::Image::ARGB, juce::jmax (1, lw), juce::jmax (1, lh), true);
+        juce::Graphics lg (layer);
+        lg.addTransform (juce::AffineTransform::scale (scale));
+        paintLayer (lg, bounds, plot);
+        layerScale = scale;
+        layerDirty = false;
+    }
+    g.drawImage (layer, getLocalBounds().toFloat());
+
+    // Frozen: the flight's top edge glows, where every step now runs out,
+    // breathing with the Freeze halo.
+    if (frozen)
+    {
+        const float breath = 0.85f + 0.15f * (0.5f + 0.5f * std::sin ((float) juce::Time::getMillisecondCounter() * 0.0016f));
+        for (int i = 5; i >= 1; --i)
+        {
+            g.setColour (theme::frozen.withAlpha (0.09f * breath));
+            g.fillRect (plot.withHeight (2.0f * (float) i + 1.0f));
+        }
+        g.setColour (theme::frozen.brighter (0.3f).withAlpha (breath));
+        g.fillRect (plot.withHeight (2.0f));
+    }
+}
+
+void DecayStairs::paintLayer (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Rectangle<float> plot)
+{
+    using namespace sth;
     // Grid: seconds, and 100 Hz / 1 kHz / 10 kHz.
     g.setFont (juce::FontOptions (10.0f));
     const float stepSeconds = yMax <= 4.0f ? 1.0f : (yMax <= 10.0f ? 2.0f : (yMax <= 25.0f ? 5.0f : 10.0f));
@@ -137,20 +208,6 @@ void DecayStairs::paint (juce::Graphics& g)
         g.fillRect (step.withHeight (1.5f));
         g.setColour (theme::stoneDeep.withAlpha (0.6f));
         g.drawVerticalLine ((int) x1, top, plot.getBottom());
-    }
-
-    // Frozen: the flight's top edge glows, where every step now runs out,
-    // breathing with the Freeze halo.
-    if (frozen)
-    {
-        const float breath = 0.85f + 0.15f * (0.5f + 0.5f * std::sin ((float) juce::Time::getMillisecondCounter() * 0.0016f));
-        for (int i = 5; i >= 1; --i)
-        {
-            g.setColour (theme::frozen.withAlpha (0.09f * breath));
-            g.fillRect (plot.withHeight (2.0f * (float) i + 1.0f));
-        }
-        g.setColour (theme::frozen.brighter (0.3f).withAlpha (breath));
-        g.fillRect (plot.withHeight (2.0f));
     }
 
     // The read-out.

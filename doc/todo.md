@@ -3,11 +3,6 @@
 Numbered; an item keeps its number when it moves to `done.md`. Priority:
 high (blocks a release), medium, low.
 
-1. **Bump the FxmeTools pin** (high). `cmake/Dependencies.cmake` pins
-   `a2f7652` (the delay-line fix); the glides for continuous changes
-   (`dsp/TankReverb.h`, `dsp/EarlyReflections.h`, 2026-11-18) are after
-   it. Once FxmeTools is pushed, pin that commit; until then pinned and CI
-   builds click on Decay and Size.
 2. **Build, host test, CPU** (high). Build the VST3 and the CLAP, load them
    in Reaper, check every floor (the crossfade, the colour), Freeze, Sync,
    presets, the meters, the splash and the "?" switch. Measure the CPU of
@@ -27,7 +22,7 @@ high (blocks a release), medium, low.
    (circles, time up, pan across); E (ascending landings, stone and brass
    knobs) was tried and reverted. Left: D (sparkles in Heaven);
    see `architecture.md`, GUI, "Proposals around the name".
-9. **First release** (medium). After 1 and 2: a screenshot for the README,
+9. **First release** (medium). After 2: a screenshot for the README,
    README checked, tag `v0.1.0`, `release.yml` on the three OSes.
 11. **Stereo into the tank** (low). The tank takes (L+R)/2, as Dattorro's;
     feeding L and R into the two branches would keep more of the source's

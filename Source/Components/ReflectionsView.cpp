@@ -30,7 +30,7 @@ namespace
 ReflectionsView::ReflectionsView (std::function<Snapshot()> src) : source (std::move (src))
 {
     timerCallback();
-    startTimerHz (30);
+    startTimerHz (frameRate);
 }
 
 ReflectionsView::~ReflectionsView()
@@ -43,6 +43,12 @@ void ReflectionsView::timerCallback()
     if (source == nullptr)
         return;
     const auto snap = source();
+
+    // Repaint only on a visible change, or while the sweep runs.
+    const auto reflectionsBefore = reflections;
+    const float predelayBefore = predelayMs, levelBefore = level, widthBefore = width, spanBefore = spanMs;
+    const auto modeBefore = mode;
+    const bool sweepingBefore = walkClock >= 0.0f;
 
     reflections = sth::StairwellEngine::earlyReflectionsFor (snap.params);
     predelayMs = snap.params.predelaySeconds * 1000.0f;
@@ -65,24 +71,65 @@ void ReflectionsView::timerCallback()
     if (onset && (walkClock < 0.0f || walkClock > 0.7f * walkSeconds))
         walkClock = 0.0f;
     else if (walkClock >= 0.0f)
-        walkClock = walkClock + 1.0f / 30.0f > walkSeconds + glowSeconds ? -1.0f : walkClock + 1.0f / 30.0f;
+        walkClock = walkClock + 1.0f / frameRate > walkSeconds + glowSeconds ? -1.0f : walkClock + 1.0f / frameRate;
 
-    repaint();
+    auto same = [] (float a, float b) { return std::abs (a - b) <= 1.0e-4f * std::max (1.0f, std::abs (a)); };
+    bool changed = mode != modeBefore
+                || ! same (predelayMs, predelayBefore) || ! same (level, levelBefore)
+                || ! same (width, widthBefore) || ! same (spanMs, spanBefore);
+    for (size_t i = 0; i < reflections.size() && ! changed; ++i)
+        changed = ! (same (reflections[i].ms, reflectionsBefore[i].ms) && same (reflections[i].gain, reflectionsBefore[i].gain)
+                     && same (reflections[i].pan, reflectionsBefore[i].pan)
+                     && same (reflections[i].lowpassHz, reflectionsBefore[i].lowpassHz));
+    // A parameter moved: the whole view. Only the sweep: just the circles
+    // (their glow included), a few small squares instead of the whole view.
+    if (changed)
+    {
+        repaint();
+    }
+    else if (walkClock >= 0.0f || sweepingBefore)
+    {
+        const auto geo = geometry();
+        for (const auto& r : reflections)
+            if (r.gain > 0.0f)
+            {
+                const float glowRadius = 1.6f * radiusOf (geo, r) + 2.0f;
+                repaint (juce::Rectangle<float> (2.0f * glowRadius, 2.0f * glowRadius)
+                             .withCentre (centreOf (geo, r)).getSmallestIntegerContainer());
+            }
+    }
+}
+
+ReflectionsView::Geometry ReflectionsView::geometry() const
+{
+    Geometry geo;
+    geo.bounds = getLocalBounds().toFloat().reduced (1.0f);
+    // Time up the left (labels), pan across, L and R under.
+    geo.plot = geo.bounds.reduced (10.0f).withTrimmedTop (16.0f).withTrimmedBottom (14.0f).withTrimmedLeft (34.0f);
+    geo.maxRadius = juce::jmin (geo.plot.getWidth() * 0.08f, geo.plot.getHeight() * 0.07f, 14.0f);
+    geo.inner = geo.plot.reduced (geo.maxRadius + 2.0f, 0.0f);
+    return geo;
+}
+
+float ReflectionsView::yOf (const Geometry& geo, float ms) const
+{
+    return geo.plot.getBottom() - geo.plot.getHeight() * juce::jlimit (0.0f, 1.0f, ms / spanMs);
+}
+
+juce::Point<float> ReflectionsView::centreOf (const Geometry& geo, const sth::StairwellEngine::Reflection& r) const
+{
+    // Where it is heard: Width scales the wet's side signal.
+    return { geo.x (sth::StairwellEngine::panAfterWidth (r.pan, width)), yOf (geo, predelayMs + r.ms) };
 }
 
 void ReflectionsView::paint (juce::Graphics& g)
 {
     using namespace sth;
-    auto bounds = getLocalBounds().toFloat().reduced (1.0f);
+    const auto geo = geometry();
+    const auto bounds = geo.bounds, plot = geo.plot, inner = geo.inner;
+    auto yOf = [&geo, this] (float ms) { return this->yOf (geo, ms); };
     g.setColour (theme::stoneDeep);
     g.fillRoundedRectangle (bounds, 5.0f);
-
-    // Time up the left (labels), pan across, L and R under.
-    auto plot = bounds.reduced (10.0f).withTrimmedTop (16.0f).withTrimmedBottom (14.0f).withTrimmedLeft (34.0f);
-    const float maxRadius = juce::jmin (plot.getWidth() * 0.08f, plot.getHeight() * 0.07f, 14.0f);
-    const auto inner = plot.reduced (maxRadius + 2.0f, 0.0f);
-    auto xOf = [&inner] (float pan) { return inner.getCentreX() + 0.5f * inner.getWidth() * juce::jlimit (-1.0f, 1.0f, pan); };
-    auto yOf = [&plot, this] (float ms) { return plot.getBottom() - plot.getHeight() * juce::jlimit (0.0f, 1.0f, ms / spanMs); };
 
     // Grid: the centre (pan 0), quarters of the time span.
     g.setColour (theme::panelLine.withAlpha (0.6f));
@@ -134,9 +181,8 @@ void ReflectionsView::paint (juce::Graphics& g)
         if (r.gain <= 0.0f)
             continue;
         const float t = predelayMs + r.ms;
-        // Where it is heard: Width scales the wet's side signal.
-        const auto centre = juce::Point<float> (xOf (sth::StairwellEngine::panAfterWidth (r.pan, width)), yOf (t));
-        const float radius = maxRadius * (0.35f + 0.65f * r.gain);
+        const auto centre = centreOf (geo, r);
+        const float radius = radiusOf (geo, r);
 
         // Darker for the duller reflections (lower low-pass).
         const float bright = juce::jlimit (0.0f, 1.0f, (r.lowpassHz - 4000.0f) / 12000.0f);

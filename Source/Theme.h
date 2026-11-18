@@ -86,20 +86,28 @@ namespace sth::theme
         strength (0 .. 1) follows the reverb's tail (the editor passes it), so
         the window brightens as the reverb blooms and dims as it dies. The
         light stays in the upper part, where it reads as a glow from above,
-        and is held to a level that keeps the controls readable. */
-    inline void paintBackdrop (juce::Graphics& g, juce::Rectangle<float> r, float light01 = 0.0f,
-                               juce::Colour lightColour = glow)
+        and is held to a level that keeps the controls readable.
+
+        In two layers, so the editor can render each once into an image and
+        blend the light at the tail's level (a gradient computed pixel by
+        pixel at every frame is what costs): the stone, then the light at
+        full strength, drawn with opacity light01. */
+    inline void paintBackdropStone (juce::Graphics& g, juce::Rectangle<float> r)
     {
         juce::ColourGradient base (glow.interpolatedWith (stone, 0.88f), r.getX(), r.getY(),
                                    stoneDeep, r.getX(), r.getBottom(), false);
         g.setGradientFill (base);
         g.fillRect (r);
+    }
 
-        const float l = juce::jlimit (0.0f, 1.0f, light01);
-        if (l <= 0.001f)
-            return;
-        juce::ColourGradient light (lightColour.withAlpha (0.28f * l), r.getCentreX(), r.getY() - r.getHeight() * 0.15f,
-                                    lightColour.withAlpha (0.0f), r.getCentreX(), r.getY() + r.getHeight() * 0.55f,
+    /** The backdrop's light at full strength; it reaches down to
+        backdropLightReach of the height. */
+    inline constexpr float backdropLightReach = 0.55f;
+
+    inline void paintBackdropLight (juce::Graphics& g, juce::Rectangle<float> r, juce::Colour lightColour)
+    {
+        juce::ColourGradient light (lightColour.withAlpha (0.28f), r.getCentreX(), r.getY() - r.getHeight() * 0.15f,
+                                    lightColour.withAlpha (0.0f), r.getCentreX(), r.getY() + r.getHeight() * backdropLightReach,
                                     true);
         g.setGradientFill (light);
         g.fillRect (r);

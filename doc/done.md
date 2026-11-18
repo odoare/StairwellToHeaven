@@ -2,6 +2,47 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## GUI CPU: a fifth to a half of what it was (2026-11-18)
+
+Reported: about 35 % of a core with the window open in Reaper, then 20 %.
+Measured in the standalone, CPU of the GUI thread alone, with a temporary
+build (removed) feeding noise bursts every half second, so every animation
+runs, and sampling the GUI thread's stacks (eu-stack; perf is not
+allowed on this machine). The cost grows with the window's pixels:
+
+| GUI thread, % of one core | 900 x 600 | 1800 x 1200 |
+|---|---|---|
+| before (whole process, GUI and DSP) | 29 | not measured |
+| first pass (caches, below) | 5.3 | 21.7 |
+| after | 3.4 | 9.5 |
+
+- Every control and display is cached as an image (`setBufferedToImage`),
+  the top bar is opaque.
+- The window's light: the backdrop is two pre-rendered layers (stone, and
+  the light at full strength blended at the tail's level), repainted only
+  where the light reaches (the top 55 %), in 1 % steps; the level glides
+  apart from what is drawn, so a slow fade still reaches dark (it stopped
+  up to 7 % above before).
+- The decay stairs: their light is a pre-rendered gradient blended at the
+  tail's level, the steps, grid and read-out an image redrawn only when the
+  parameters, colours or size change; only the plot is repainted for the
+  light (20 Hz, 2 % steps), only its top edge for Freeze's breathing.
+- The early reflections: during the sweep only the circles' squares are
+  repainted (the whole view, 30 times a second, was the largest cost); the
+  view runs at 20 Hz, the editor's rate, so their repaints share frames.
+- Both displays repaint only on a visible change (they repainted at 30 Hz
+  in silence); the meters only when what they draw moves (FxmeTools
+  `StereoLevelMeter::update`, so every plugin using it gains).
+
+Not checked visually here (no screen capture on this session).
+
+## 1. FxmeTools pin bumped (2026-11-18)
+
+`cmake/Dependencies.cmake` pins FxmeTools `4522ff2` (the glides for
+continuous changes), which includes everything this plugin needs:
+`TankReverb`, `EarlyReflections`, `TopBar::setTitleImage`, the Freeze and
+delay-line fixes. Pinned and CI builds now match the local sibling build.
+
 ## Continuous changes: Decay, Pre-delay, mode, Size (2026-11-18)
 
 Changing Decay, Pre-delay or the mode clicked. Measured with two steady

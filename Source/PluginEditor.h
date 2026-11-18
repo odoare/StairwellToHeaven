@@ -113,8 +113,15 @@ private:
 
     /** The window's light (0 .. 1), following the tail: rises fast, falls
         slowly, held while frozen; and its colour (pale blue in Heaven). */
-    float windowLight = 0.0f;
+    float windowLight = 0.0f;        // as drawn
+    float windowLightLevel = 0.0f;   // following the tail
     juce::Colour windowLightColour = sth::theme::glow;
+
+    /** The backdrop, rendered once (stone; the light at full strength, in
+        its colour): paint() copies the stone and blends the light at
+        windowLight. Rebuilt on resize, and the light on a colour change. */
+    juce::Image backdropStone, backdropLight;
+    juce::Colour backdropLightColour;
 
     /** The floor whose colour the window wears (fractional while gliding to
         the selected one) and that colour. */
