@@ -1,5 +1,7 @@
 # Stairwell to Heaven
 
+![Stairwell to Heaven](doc/screenshot.png)
+
 An algorithmic stereo reverb by [FX-Mechanics](https://fx-mechanics.com):
 early reflections, then a diffuse tail from a figure-eight tank (after Jon
 Dattorro's), whose decay is set in seconds and shaped across frequency.
@@ -16,13 +18,24 @@ Dattorro's), whose decay is set in seconds and shaped across frequency.
   per third of an octave.
 - Size, Diffusion, modulation (rate, depth), Early/Late balance, Width, low
   and high cut on the reverb only, Mix and Gain, input and output meters.
-- Pre-delay in milliseconds or as a note value at the host tempo.
+- Pre-delay in milliseconds or as a note duration value at the host tempo.
 - Freeze: holds the tail for ever, play over it.
 - Twelve factory presets, your own in the preset bar.
 - VST3, AU (macOS), CLAP and a standalone application; Linux, Windows,
   macOS (universal).
 
-Status: in development (0.1.0, not released yet).
+Status: in development (0.1.0, fully functionnal, open to user feedback).
+
+## FxmeNet compatible
+
+Stairwell to Heaven works with [FxmeNet](https://github.com/odoare/FxmeNet),
+an open source tool from FX-Mechanics that runs a DAW's effects on another
+computer of the local network. The DSP runs on the FxmeNet server while the
+editor stays in your DAW, with its meters and the decay stairs showing the
+real signal. Nothing changes if you don't use FxmeNet.
+
+More about FxmeNet: <https://github.com/odoare/FxmeNet>. More about
+FX-Mechanics and its plugins: <https://fx-mechanics.com>.
 
 ## Installing
 
@@ -104,3 +117,5 @@ built on (FxmeTools' core: the tank, the early reflections) is LGPL.
 
 The tank follows Jon Dattorro, "Effect Design, Part 1: Reverberator and
 Other Filters", J. Audio Eng. Soc. 45 (9), 1997.
+
+![Stairwell to Heaven splash](Source/Assets/splash.png)
