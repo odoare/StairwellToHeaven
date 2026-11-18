@@ -2,6 +2,31 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## Continuous changes: Decay, Pre-delay, mode, Size (2026-11-18)
+
+Changing Decay, Pre-delay or the mode clicked. Measured with two steady
+sines through the wet and the output's energy above 6 kHz (a click is
+broadband): a Decay jump gave -24 dB under the signal, every mode change
+and Pre-delay jump clicked too. Now all stay under -90 dB (`EngineTests`
+11, every pair of floors included):
+
+- Decay (FxmeTools `TankReverb`): the loop's gains, the diffusers, the
+  modulation depth and the shimmer gains glide per sample (30 ms) instead
+  of stepping per block; each gain stays <= 1 along the glide.
+- Pre-delay: no more glide (it swept the pitch, and jumped under 2
+  samples); a change crossfades between two read heads over 50 ms.
+- Mode: the input moves from the old space to the new over 50 ms (a steady
+  sound entering an empty space at once started with a click); the new
+  space starts at its own size (`reset()` now ends every glide).
+- Size: the reflections' taps glide too (FxmeTools `EarlyReflections`),
+  and every Size glide is capped at 0.25 samples per sample (a bend of
+  about 4 semitones; a big jump takes about a second). Still a faint trace
+  above 6 kHz while it moves (-64 to -71 dB): a moving read point's
+  interpolation, as in any chorus, not a click.
+
+FxmeTools changed again (`TankReverb.h`, `EarlyReflections.h`,
+`CoreReverbTests` 8): the pin needs another bump.
+
 ## Fix: output bursts and a reverb stuck silent (2026-11-16)
 
 Seen in Reaper: a very loud burst (Reaper muted the track), then nothing

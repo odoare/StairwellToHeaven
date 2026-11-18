@@ -3,10 +3,11 @@
 Numbered; an item keeps its number when it moves to `done.md`. Priority:
 high (blocks a release), medium, low.
 
-1. **Bump the FxmeTools pin** (high). `cmake/Dependencies.cmake` pins the
-   FxmeTools commit before `dsp/TankReverb.h`, `dsp/EarlyReflections.h`
-   and `TopBar::setTitleImage`. Once FxmeTools is pushed, pin that commit;
-   CI and pinned builds fail until then.
+1. **Bump the FxmeTools pin** (high). `cmake/Dependencies.cmake` pins
+   `a2f7652` (the delay-line fix); the glides for continuous changes
+   (`dsp/TankReverb.h`, `dsp/EarlyReflections.h`, 2026-11-18) are after
+   it. Once FxmeTools is pushed, pin that commit; until then pinned and CI
+   builds click on Decay and Size.
 2. **Build, host test, CPU** (high). Build the VST3 and the CLAP, load them
    in Reaper, check every floor (the crossfade, the colour), Freeze, Sync,
    presets, the meters, the splash and the "?" switch. Measure the CPU of

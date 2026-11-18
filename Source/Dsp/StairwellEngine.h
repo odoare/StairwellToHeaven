@@ -42,8 +42,9 @@
 
     Changing the mode crossfades two spaces (a tank and its early
     reflections each). The new mode starts in the idle space, cleared, and
-    takes the input from then on; the old space stops taking input and its
-    tail rings on, fading out over a second (sooner once it has died away).
+    the input moves to it over 50 ms (a sound entering an empty space at
+    once would start with a click); the old space's tail rings on, fading
+    out over a second (sooner once it has died away).
     No click, and the tail is kept: it costs twice the tank's CPU during the
     fade only. A further change while a tail is still fading speeds that
     fade up (30 ms) and waits for it, so no tail is ever cut. Size within a
@@ -53,6 +54,11 @@
     bad; and a wet that goes bad anyway (NaN, or past +60 dBFS) is muted and
     the whole reverb cleared at the end of the block (reset()), so no bad
     state can stay in a filter or a line.
+
+    Continuous changes: Decay and the tank's other coefficients glide in the
+    tank (fxme::TankReverb), Size glides in the tank and the reflections,
+    the levels glide here, and a pre-delay change crossfades between two
+    read heads over 50 ms (a glide would sweep the pitch).
 
     Threading: prepare() allocates; setParameters() and process() are
     realtime safe (setParameters() once per block).
@@ -193,6 +199,13 @@ private:
     void updateSpace (Space& s) noexcept;
     void startSwitch() noexcept;
 
+    /** The pre-delay line `ch` read `d` samples back; under 2 samples, the
+        dry input itself. */
+    float predelayRead (int ch, float d, float dry) const noexcept
+    {
+        return d < 2.0f ? dry : predelay[(size_t) ch].read (d);
+    }
+
     struct Smoothed
     {
         float current = 0.0f, target = 0.0f, coef = 0.001f;
@@ -216,7 +229,16 @@ private:
     bool lowCutOn = false, highCutOn = false;
     std::array<fxme::VuMeter, 2> inMeters, outMeters;
 
-    Smoothed predelaySamples, mix, outGain, erGain, lateGain, width, pitchedMix;
+    Smoothed mix, outGain, erGain, lateGain, width, pitchedMix;
+
+    // Pre-delay: two read heads; a change crossfades from the one in use to
+    // one at the new time (no glide: no pitch sweep, no jump).
+    float predelayTarget = 0.0f, predelayNow = 0.0f, predelayNext = 0.0f;
+    float predelayMix = 0.0f, predelayStep = 0.001f;
+    bool  predelayFading = false;
+
+    // Mode change: the input crossfades from the old space to the new one.
+    float inputToLive = 1.0f, inputStep = 0.001f;
 
     // Mode change: the old space's tail fades (1 .. 0) while the new one plays.
     bool  tailFading = false;

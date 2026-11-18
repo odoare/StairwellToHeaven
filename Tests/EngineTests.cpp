@@ -21,6 +21,12 @@
      10. Pitched input (Heaven, +12, the shimmer loop off): at 100 % the wet
          holds no original pitch (a 440 Hz sine comes out at 880 Hz, the
          440 Hz at least 30 dB under); at 0 % the original pitch dominates.
+     11. Continuous changes: two steady sines (220 and 600 Hz) through the
+         wet, then a jump in Decay, Pre-delay, Size or the mode. A click is
+         broadband: the output above 6 kHz (8th-order high-pass) must stay
+         70 dB under the signal's peak (55 dB for Size, whose glide bends
+         the pitch). Before the glides and crossfades, a Decay jump gave
+         -24 dB.
 
     Exit code 0 when everything passes.
 
@@ -33,6 +39,7 @@
 #include "StairwellEngine.h"
 
 #include <cmath>
+#include <functional>
 #include <cstdio>
 #include <vector>
 
@@ -71,6 +78,62 @@ namespace
         return s;
     }
 }
+
+    /** RBJ high-pass biquad at 6 kHz; four in series make an 8th-order
+        Butterworth (their Q). */
+    struct HighPass
+    {
+        double b0, b1, b2, a1, a2, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+        explicit HighPass (double q)
+        {
+            const double w = 2.0 * 3.141592653589793 * 6000.0 / fs, c = std::cos (w), al = std::sin (w) / (2.0 * q), a0 = 1.0 + al;
+            b0 = (1.0 + c) / 2.0 / a0; b1 = -(1.0 + c) / a0; b2 = b0; a1 = -2.0 * c / a0; a2 = (1.0 - al) / a0;
+        }
+        double process (double x)
+        {
+            const double y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+            x2 = x1; x1 = x; y2 = y1; y1 = y;
+            return y;
+        }
+    };
+
+    /** The output's peak above 6 kHz in the 100 ms after `change`, in dB
+        under the output's peak (steady sines in, the wet only). */
+    double clickDb (sth::Parameters p, const std::function<void (sth::Parameters&)>& change)
+    {
+        p.mix01 = 1.0f;
+        sth::StairwellEngine e;
+        e.setParameters (p);
+        e.prepare (fs);
+        HighPass hp[4] { HighPass (0.5098), HighPass (0.6013), HighPass (0.9000), HighPass (2.5629) };
+        std::vector<float> l (256), r (256);
+        double ph1 = 0.0, ph2 = 0.0, peak = 0.0, hf = 0.0;
+        auto run = [&] (int blocks, bool measure)
+        {
+            for (int b = 0; b < blocks; ++b)
+            {
+                for (size_t i = 0; i < l.size(); ++i)
+                {
+                    l[i] = r[i] = 0.3f * (float) (std::sin (ph1) + 0.5 * std::sin (ph2));
+                    ph1 += 2.0 * 3.141592653589793 * 220.0 / fs;
+                    ph2 += 2.0 * 3.141592653589793 * 600.0 / fs;
+                }
+                e.process (l.data(), r.data(), (int) l.size());
+                for (float v : l)
+                {
+                    double y = v;
+                    for (auto& f : hp) y = f.process (y);
+                    peak = std::max (peak, (double) std::abs (v));
+                    if (measure) hf = std::max (hf, std::abs (y));
+                }
+            }
+        };
+        run (560, false);   // 3 s: settled
+        change (p);
+        e.setParameters (p);
+        run (19, true);     // 100 ms
+        return 20.0 * std::log10 (hf / peak + 1.0e-12);
+    }
 
 int main()
 {
@@ -348,6 +411,50 @@ int main()
                      20.0 * std::log10 (a880 / a440), 20.0 * std::log10 (b440 / b880));
         check (a440 < a880 * 0.0316, "100 %: the original pitch at least 30 dB under the interval");
         check (b440 > b880 * 10.0, "0 %: the original pitch dominates");
+    }
+
+    std::printf ("11. Continuous changes\n");
+    {
+        sth::Parameters p;
+        auto report = [] (const char* what, double db, double limit)
+        {
+            std::printf ("     %-28s above 6 kHz: %6.1f dB\n", what, db);
+            return db < limit;
+        };
+        bool ok = true;
+        p.decay = 0.5f;  ok &= report ("Decay 0.5 -> 20 s", clickDb (p, [] (auto& q) { q.decay = 20.0f; }), -70.0);
+        p.decay = 20.0f; ok &= report ("Decay 20 -> 0.5 s", clickDb (p, [] (auto& q) { q.decay = 0.5f; }), -70.0);
+        p.decay = 2.5f;
+        p.predelaySeconds = 0.0f; ok &= report ("Pre-delay 0 -> 300 ms", clickDb (p, [] (auto& q) { q.predelaySeconds = 0.3f; }), -70.0);
+        p.predelaySeconds = 0.3f; ok &= report ("Pre-delay 300 -> 10 ms", clickDb (p, [] (auto& q) { q.predelaySeconds = 0.01f; }), -70.0);
+        p.predelaySeconds = 0.02f;
+        check (ok, "Decay and Pre-delay jumps: no click");
+
+        bool modesOk = true;
+        double worst = -200.0;
+        for (int a = 0; a < sth::numModes; ++a)
+            for (int b = 0; b < sth::numModes; ++b)
+                if (a != b)
+                {
+                    auto q = p;
+                    q.mode = (Mode) a;
+                    const double db = clickDb (q, [b] (auto& x) { x.mode = (Mode) b; });
+                    worst = std::max (worst, db);
+                    modesOk &= db < -70.0;
+                }
+        std::printf ("     every mode change, the worst above 6 kHz: %.1f dB\n", worst);
+        check (modesOk, "mode changes: no click");
+
+        bool sizeOk = true;
+        for (Mode m : { Mode::room, Mode::hall })
+        {
+            p.mode = m;
+            p.size01 = 1.0f; sizeOk &= report (m == Mode::room ? "Room Size 100 -> 0 %" : "Hall Size 100 -> 0 %",
+                                               clickDb (p, [] (auto& q) { q.size01 = 0.0f; }), -55.0);
+            p.size01 = 0.0f; sizeOk &= report (m == Mode::room ? "Room Size 0 -> 100 %" : "Hall Size 0 -> 100 %",
+                                               clickDb (p, [] (auto& q) { q.size01 = 1.0f; }), -55.0);
+        }
+        check (sizeOk, "Size jumps: a glide, no click");
     }
 
     std::printf (failures == 0 ? "All engine tests passed\n" : "%d engine test(s) FAILED\n", failures);

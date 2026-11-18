@@ -100,7 +100,7 @@ side `TopBar`, `PresetBarComponent`, `PresetManager`, `SplashOverlay`,
 
 ```
 in L,R ─┬───────────────────────────────────────────────────────── dry ──┐
-        └─ pre-delay (0..500 ms or a note value, glides)                  │
+        └─ pre-delay (0..500 ms or a note value, 2 heads crossfaded)      │
              ├─ early reflections (8 taps, pattern per mode) ── ER ──┐    │
              │        └── x erIntoTank (per mode) ──┐                 │    │
              └────────────────────────────────────── + ─ tank ─ late ─┤    │
@@ -141,7 +141,18 @@ exactly what the tank does.
 29761 Hz, so the same time at any rate) x Depth: a sine in quadrature
 between the branches plus a slow seeded random drift. Every line is a
 `ModDelayLine` (Catmull-Rom), so Size also glides (0.2 s) instead of
-clicking.
+clicking, at most 0.25 samples per sample on the longest line (a bend of
+about 4 semitones; a big jump takes about a second).
+
+**Continuous changes.** Every coefficient set per block glides per sample
+(one pole, 30 ms): the per-pass gains (mid, low, high and the high shelf's
+ratio), the input diffusers' coefficients, the modulation excursion and the
+shimmer gains. A step in a gain inside the loop is a click (a Decay jump
+gave -24 dB of energy above 6 kHz; now under -90 dB). Each gain glides
+between values <= 1, so the loop stays stable along the glide, and the
+shimmer budget, concave in the gain, stays under its limit. `reset()` ends
+every glide on its target, so a tank cleared and given new settings starts
+as if prepared with them.
 
 **Freeze.** Every loss ramps to unity over 50 ms (decay gain and both
 shelves), the input to zero, the shimmer to zero: the allpasses are
@@ -193,21 +204,29 @@ barely darkened), and less decay diffusion keeps the onset ringing.
 
 Changing floors crossfades two spaces (a tank and its ER each,
 `StairwellEngine::Space`). The new mode starts in the idle space, cleared
-(its lengths jump), and takes the input from then on; the old space stops
-taking input and its tail rings on, fading out over 1 s (squared, so it
+(voiced before the reset, so it starts at its own size), and the input
+moves to it over 50 ms (a steady sound entering an empty space at once
+starts with a click); the old space's tail rings on, fading out over 1 s (squared, so it
 ends smoothly), or sooner once its loop is under -100 dB over a block. The
 tail is kept and nothing clicks; the tank's CPU doubles during the fade
 only. A further change while a tail is still fading speeds that fade up
 (30 ms) and waits for it, so a tail is never cut. `EngineTests` 6 checks
 both (no step bigger than the tail's own, the tail kept within 6 dB, gone
-after 1.6 s; a second change 10 ms later).
+after 1.6 s; a second change 10 ms later), `EngineTests` 11 every pair of
+floors (no energy above 6 kHz within 70 dB of the signal).
+
+The pre-delay does not glide (a glide sweeps the pitch, and fast): a change
+crossfades over 50 ms from the read head in use to a second one at the new
+time; a further change waits for the crossfade to end. A knob turned is a
+series of these, smooth.
 
 ### Early reflections (`fxme::EarlyReflections`)
 
 Eight taps (time, gain, equal-power pan, a one-pole low-pass darker for
 later taps) from one line fed (L+R)/2. Patterns: room (4 to 39 ms,
 irregular), hall (10 to 79 ms, darker), plate (two faint taps), stairwell
-(regular flutter). Times scale with Size within the mode's range.
+(regular flutter). Times scale with Size within the mode's range; a new
+scale glides (50 ms, at most 0.25 samples per sample per tap).
 
 ## Parameters
 

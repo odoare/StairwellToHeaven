@@ -25,6 +25,8 @@ namespace
     constexpr double kQuickFadeSeconds = 0.03;   // ... when a further change waits for it
     constexpr float  kTailGoneEnergy   = 1.0e-10f;   // -100 dB: the old tail has died away
     constexpr double kVuSeconds        = 0.3;
+    constexpr double kPredelayFadeSeconds = 0.05;   // a pre-delay change, head to head
+    constexpr double kInputFadeSeconds    = 0.05;   // a mode change: the input, old space to new
     constexpr double kButterworthK     = 1.4142135623730951;
     constexpr float  kHalfPi           = 1.5707963f;
 
@@ -132,12 +134,15 @@ void StairwellEngine::prepare (double sampleRate)
         }
 
     const float coef = 1.0f - (float) std::exp (-1.0 / (kSmoothingSeconds * fs));
-    for (auto* s : { &predelaySamples, &mix, &outGain, &erGain, &lateGain, &width, &pitchedMix })
+    for (auto* s : { &mix, &outGain, &erGain, &lateGain, &width, &pitchedMix })
         s->coef = coef;
+    predelayStep = (float) (1.0 / (kPredelayFadeSeconds * fs));
+    inputStep = (float) (1.0 / (kInputFadeSeconds * fs));
 
     reset();
     setParameters (params);
-    predelaySamples.snap (predelaySamples.target);
+    predelayNow = predelayTarget;
+    predelayFading = false;
     mix.snap (mix.target);
     pitchedMix.snap (pitchedMix.target);
     outGain.snap (outGain.target);
@@ -148,6 +153,10 @@ void StairwellEngine::prepare (double sampleRate)
 
 void StairwellEngine::reset()
 {
+    // Nothing is sounding: the mode applies at once, without a crossfade
+    // (voiced before the reset, which ends every glide on its target).
+    voice (liveSpace(), params.mode);
+    updateSpace (liveSpace());
     for (auto& s : spaces)
     {
         s.tank.reset();
@@ -162,11 +171,11 @@ void StairwellEngine::reset()
         for (auto& m : *meters)
             m.clear();
 
-    // Nothing is sounding: the mode applies at once, without a crossfade.
     tailFading = false;
     tailLevel = 0.0f;
-    voice (liveSpace(), params.mode);
-    updateSpace (liveSpace());
+    inputToLive = 1.0f;
+    predelayNow = predelayTarget;
+    predelayFading = false;
     activeFloor.store ((int) params.mode, std::memory_order_relaxed);
     modeFadeLevel.store (1.0f, std::memory_order_relaxed);
 }
@@ -190,13 +199,16 @@ void StairwellEngine::updateSpace (Space& s) noexcept
 
 void StairwellEngine::startSwitch() noexcept
 {
-    // The idle space takes the new mode, clean; the live one becomes the tail.
+    // The idle space takes the new mode, clean (voiced first: reset() then
+    // starts it at its own size, with no glide from its last use); the live
+    // one becomes the tail, and the input moves over.
     auto& next = fadingSpace();
-    next.tank.reset();
-    next.er.reset();
     voice (next, params.mode);
     updateSpace (next);
+    next.tank.reset();
+    next.er.reset();
     live = 1 - live;
+    inputToLive = 0.0f;
     tailFading = true;
     tailLevel = 1.0f;
     tailStep = (float) (1.0 / (kTailFadeSeconds * fs));
@@ -211,7 +223,7 @@ void StairwellEngine::setParameters (const Parameters& p) noexcept
     if (tailFading)
         updateSpace (fadingSpace());
 
-    predelaySamples.target = (float) (std::clamp (p.predelaySeconds, 0.0f, maxPredelaySeconds) * fs);
+    predelayTarget = (float) (std::clamp (p.predelaySeconds, 0.0f, maxPredelaySeconds) * fs);
     mix.target = std::clamp (p.mix01, 0.0f, 1.0f);
 
     // Pitched input: Heaven only; the two voices' intervals, weighted by
@@ -261,12 +273,28 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
         const float dryR = fxme::sanitiseSample (right[i], fxme::kMainPathLimit);
         inputPeak = std::max (inputPeak, std::max (std::abs (dryL), std::abs (dryR)));
 
-        // Pre-delay (glides when changed).
-        const float d = predelaySamples.next();
+        // Pre-delay: a change crossfades to a second head at the new time.
         predelay[0].write (dryL);
         predelay[1].write (dryR);
-        float pl = d < 2.0f ? dryL : predelay[0].read (d);
-        float pr = d < 2.0f ? dryR : predelay[1].read (d);
+        if (! predelayFading && std::abs (predelayTarget - predelayNow) > 0.5f)
+        {
+            predelayNext = predelayTarget;
+            predelayMix = 0.0f;
+            predelayFading = true;
+        }
+        float pl = predelayRead (0, predelayNow, dryL);
+        float pr = predelayRead (1, predelayNow, dryR);
+        if (predelayFading)
+        {
+            pl += predelayMix * (predelayRead (0, predelayNext, dryL) - pl);
+            pr += predelayMix * (predelayRead (1, predelayNext, dryR) - pr);
+            predelayMix += predelayStep;
+            if (predelayMix >= 1.0f)
+            {
+                predelayNow = predelayNext;
+                predelayFading = false;
+            }
+        }
 
         // Pitched input: the shifters run while it is up (or fading), and
         // start clean when it comes back.
@@ -291,20 +319,27 @@ void StairwellEngine::process (float* left, float* right, int numSamples) noexce
             pitchedInputActive = false;
         }
 
+        // After a mode change the input moves from the old space to the new.
+        const float toLive = inputToLive;
+        if (inputToLive < 1.0f)
+            inputToLive = std::min (1.0f, inputToLive + inputStep);
+
         float el, eR, tl, tr;
-        now.er.process (pl, pr, el, eR);
+        now.er.process (toLive * pl, toLive * pr, el, eR);
         const float erMono = 0.5f * (el + eR);
-        now.tank.process (pl + now.erIntoTank * erMono, pr + now.erIntoTank * erMono, tl, tr);
+        now.tank.process (toLive * pl + now.erIntoTank * erMono, toLive * pr + now.erIntoTank * erMono, tl, tr);
         energy = std::max (energy, now.tank.getEnergy());
 
-        // The old space, after a mode change: no more input, its tail fading
-        // (squared, so it ends smoothly).
+        // The old space, after a mode change: the rest of the input as it
+        // moves away, then none; its tail fading (squared, so it ends
+        // smoothly).
         if (tailFading)
         {
+            const float toOld = 1.0f - toLive;
             float oel, oer, otl, otr;
-            old.er.process (0.0f, 0.0f, oel, oer);
+            old.er.process (toOld * pl, toOld * pr, oel, oer);
             const float oldErIn = old.erIntoTank * 0.5f * (oel + oer);
-            old.tank.process (oldErIn, oldErIn, otl, otr);
+            old.tank.process (toOld * pl + oldErIn, toOld * pr + oldErIn, otl, otr);
             const float g = tailLevel * tailLevel;
             el += g * oel;  eR += g * oer;
             tl += g * otl;  tr += g * otr;

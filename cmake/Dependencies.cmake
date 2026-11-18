@@ -15,7 +15,7 @@ fxme_dependency(JUCE https://github.com/juce-framework/JUCE 9.0.4 SHALLOW)
 # dsp/TankReverb.h and dsp/EarlyReflections.h (not pushed when this was
 # written; the sibling clone has them).
 fxme_dependency(FxmeTools https://github.com/odoare/FxmeTools
-    a2f76522918b31974b7618374f8a9478aa9a1450)
+    4522ff2f1631d954371e70cbc9c1178bce189938)
 # CLAP format (fxmetools_add_clap). Its last tag predates JUCE 9 support:
 # pinned to a commit. Brings the clap and clap-helpers submodules along.
 fxme_dependency(ClapJuceExtensions https://github.com/free-audio/clap-juce-extensions
