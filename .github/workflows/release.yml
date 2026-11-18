@@ -12,6 +12,10 @@ on:
 
 # JUCE and FxmeTools are fetched by CMake at the commits pinned in
 # cmake/Dependencies.cmake; -DFXME_USE_SIBLINGS=OFF makes sure of it.
+#
+# The version is the tag's: cmake/Version.cmake reads it with git describe
+# (hence fetch-depth: 0), for the hosts, the window and the macOS installer.
+# A manual run builds whatever the latest tag plus commits gives.
 
 jobs:
   # ── Linux x86_64 ──────────────────────────────────────────────────────────
@@ -30,6 +34,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: StairwellToHeaven
+          fetch-depth: 0   # history and tags: the version is the tag's (cmake/Version.cmake)
 
       - name: Configure & Build
         run: |
@@ -38,6 +43,15 @@ jobs:
           # build it alone first to keep peak RAM down, then the rest.
           cmake --build StairwellToHeaven/build --config Release --target StairwellToHeavenBinaryData --parallel 1
           cmake --build StairwellToHeaven/build --config Release --parallel 2
+
+      - name: Check the version against the tag
+        shell: bash
+        run: |
+          BUILT=$(tr -d '[:space:]' < StairwellToHeaven/build/version.txt)
+          echo "Version built: $BUILT"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$BUILT" != "${GITHUB_REF_NAME#v}" ]]; then
+            echo "::error::built $BUILT, but the tag is $GITHUB_REF_NAME"; exit 1
+          fi
 
       - name: Engine tests
         run: ctest --test-dir StairwellToHeaven/build --output-on-failure
@@ -63,6 +77,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: StairwellToHeaven
+          fetch-depth: 0   # history and tags: the version is the tag's (cmake/Version.cmake)
 
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -74,6 +89,15 @@ jobs:
           cmake -B StairwellToHeaven/build -S StairwellToHeaven -G Ninja -DCMAKE_BUILD_TYPE=Release -DFXME_USE_SIBLINGS=OFF
           cmake --build StairwellToHeaven/build --target StairwellToHeavenBinaryData --parallel 1
           cmake --build StairwellToHeaven/build --parallel
+
+      - name: Check the version against the tag
+        shell: bash
+        run: |
+          BUILT=$(tr -d '[:space:]' < StairwellToHeaven/build/version.txt)
+          echo "Version built: $BUILT"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$BUILT" != "${GITHUB_REF_NAME#v}" ]]; then
+            echo "::error::built $BUILT, but the tag is $GITHUB_REF_NAME"; exit 1
+          fi
 
       - name: Package
         shell: bash
@@ -97,6 +121,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: StairwellToHeaven
+          fetch-depth: 0   # history and tags: the version is the tag's (cmake/Version.cmake)
 
       - name: Configure & Build
         run: |
@@ -111,6 +136,15 @@ jobs:
           cmake --build StairwellToHeaven/build --config Release --target StairwellToHeavenBinaryData --parallel 1
           # Capped at 2: the universal build doubles the compile/link load.
           cmake --build StairwellToHeaven/build --config Release --parallel 2
+
+      - name: Check the version against the tag
+        shell: bash
+        run: |
+          BUILT=$(tr -d '[:space:]' < StairwellToHeaven/build/version.txt)
+          echo "Version built: $BUILT"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$BUILT" != "${GITHUB_REF_NAME#v}" ]]; then
+            echo "::error::built $BUILT, but the tag is $GITHUB_REF_NAME"; exit 1
+          fi
 
       # This step used to print `lipo -info` and pass whatever it found, so a
       # single-architecture build sailed through CI and shipped. It now fails
@@ -157,8 +191,7 @@ jobs:
 
       - name: Build pkg installer
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          [[ "$VERSION" =~ ^[0-9] ]] || VERSION="0.1.0"   # manual runs have no tag
+          VERSION=$(tr -d '[:space:]' < StairwellToHeaven/build/version.txt)   # the tag's, as CMake found it
           ART=StairwellToHeaven/build/StairwellToHeaven_artefacts/Release
           mkdir -p pkg_root/Library/Audio/Plug-Ins/VST3
           mkdir -p pkg_root/Library/Audio/Plug-Ins/Components

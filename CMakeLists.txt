@@ -13,7 +13,9 @@ if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Target architectures")
 endif()
 
-project(StairwellToHeaven VERSION 0.1.0 LANGUAGES C CXX)
+# The version is the git tag's (cmake/Version.cmake), nowhere else.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
+project(StairwellToHeaven VERSION ${STH_VERSION_NUMBER} LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +50,14 @@ file(GLOB_RECURSE STH_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h)
 target_sources(StairwellToHeaven PRIVATE ${STH_SOURCES})
+
+# The version the window shows, in a generated header (rewritten only when
+# it changes, so a new commit recompiles the editor, not the whole plugin);
+# version.txt for the release workflow (the macOS installer's version).
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/StairwellVersion.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/generated/StairwellVersion.h @ONLY)
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/version.txt "${STH_VERSION_NUMBER}\n")
+target_include_directories(StairwellToHeaven PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 target_include_directories(StairwellToHeaven PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Dsp

@@ -46,6 +46,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "AppSettings.h"
+#include "StairwellVersion.h"   // generated: STH_VERSION_DISPLAY
 #include "Theme.h"
 #include "Components/DecayStairs.h"
 #include "Components/FloorSelector.h"
@@ -77,7 +78,9 @@ private:
     StairwellAudioProcessor& processor;
     fxme::FxmeLookAndFeel laf;
 
-    fxme::TopBar topBar { sth::theme::displayName, "Algorithmic reverb", JucePlugin_VersionString, logoImage() };
+    // The version from the git tag (cmake/Version.cmake): "0.1.0", or
+    // "0.1.0-3-gabc1234" for a build after it.
+    fxme::TopBar topBar { sth::theme::displayName, "Algorithmic reverb", STH_VERSION_DISPLAY, logoImage() };
     fxme::PresetBarComponent presetBar { processor.getPresetManager() };
     fxme::AccentToggle tooltipsButton;
     fxme::InfoButton infoButton;

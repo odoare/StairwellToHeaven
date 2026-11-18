@@ -2,6 +2,19 @@
 
 Newest first. Items that came from `todo.md` keep their number.
 
+## The version comes from the git tag (2026-11-18)
+
+The version was set by hand in `project()` (0.1.0), and the macOS installer
+fell back to 0.1.0 without a tag. Now `cmake/Version.cmake` reads the latest
+`vX.Y.Z` tag (`git describe`): X.Y.Z for the hosts, the full description
+in the window (`0.1.0`, `0.1.0-3-gabc1234`, `0.0.0-dev` before any tag),
+`-DSTH_VERSION` to override. CMake reconfigures on a commit, checkout or
+new tag. `release.yml`: checkouts with tags, a check that a tag run builds
+the tag's version, the macOS installer's version from the build. FxmeTools
+`TopBar` widens its version area for a long version (a dev build's). Tested
+in a throwaway clone: no tag, on a tag, two commits after, the override, a
+malformed override, the reconfigure on a new tag and a new commit.
+
 ## GUI CPU: a fifth to a half of what it was (2026-11-18)
 
 Reported: about 35 % of a core with the window open in Reaper, then 20 %.

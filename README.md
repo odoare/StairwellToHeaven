@@ -85,6 +85,15 @@ Targets: `StairwellToHeaven_VST3`, `_AU`, `_CLAP`, `_Standalone`, `_All`.
 Engine tests (headless): configure with `-DSTH_BUILD_TESTS=ON`, build
 `StairwellEngineTests`, run `ctest --test-dir build`.
 
+The version is the latest `vX.Y.Z` git tag's, everywhere (the window, the
+hosts, the macOS installer): `0.1.0` built on the tag `v0.1.0`,
+`0.1.0-3-gabc1234` three commits after it, `0.0.0-dev` before any tag.
+`-DSTH_VERSION=X.Y.Z` overrides it. To release, tag and push the tag:
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```
+
 How it works, the parameters and the plan: `doc/architecture.md`.
 
 ## Licence

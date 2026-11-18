@@ -44,6 +44,8 @@ StairwellToHeaven/
   CMakeLists.txt            the plugin (AU, VST3, Standalone, CLAP), the engine test
   cmake/FxmeDeps.cmake      sibling-or-pin resolution (verbatim copy from FxmeFX)
   cmake/Dependencies.cmake  pins: JUCE 9.0.4, FxmeTools, clap-juce-extensions
+  cmake/Version.cmake       the version, from the git tag
+  cmake/StairwellVersion.h.in  the window's version string (generated header)
   Source/
     PluginProcessor.*       APVTS, PresetManager, glue to the engine
     PluginEditor.*          the window (shell + controls)
@@ -73,6 +75,17 @@ cmake -S . -B build -DSTH_BUILD_TESTS=ON
 cmake --build build --target StairwellToHeaven_VST3 -j2
 cmake --build build --target StairwellEngineTests -j2 && ctest --test-dir build
 ```
+
+Version: the latest `vX.Y.Z` tag reachable from HEAD (`git describe`, in
+`cmake/Version.cmake`, before `project()`), the only place it is set.
+`project()` gets X.Y.Z, so the hosts (VST3, AU, CLAP, the standalone) do;
+the window shows the full description (`0.1.0`, `0.1.0-3-gabc1234` after
+the tag, `0.0.0-dev` before any) from a generated header, rewritten only
+when it changes (a commit recompiles the editor, not the plugin). CMake
+reconfigures on a commit, a checkout or a new tag. `-DSTH_VERSION=X.Y.Z`
+overrides. `release.yml` checks out with tags (`fetch-depth: 0`), fails a
+tag run whose built version is not the tag's, and gives the macOS
+installer the same version (`build/version.txt`).
 
 Plugin type: audio effect (`IS_SYNTH FALSE`, no MIDI, `kAudioUnitType_Effect`,
 VST3 `Fx Reverb`), code `STWH`, CLAP ID `com.fx-mechanics.StairwellToHeaven`
